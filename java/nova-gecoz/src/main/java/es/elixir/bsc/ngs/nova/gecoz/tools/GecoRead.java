@@ -55,8 +55,10 @@ public class GecoRead {
                 System.exit(1);                
             }
             
+            to = Math.min(to, ssa.getLength(nstr));
+
             FileChannel channel = FileChannel.open(opath, EnumSet.of(CREATE,READ,WRITE, TRUNCATE_EXISTING));
-            ByteBuffer buf = channel.map(FileChannel.MapMode.READ_WRITE, 0, Math.min(to, bheader.len - 1) - from);
+            ByteBuffer buf = channel.map(FileChannel.MapMode.READ_WRITE, 0, to - from);
 
             System.out.println("extracting '" + header + "' (from " + from + " to " + (to == Integer.MAX_VALUE ? ".." : Long.toString(to)) + ")");
             final long t1 = System.nanoTime();
