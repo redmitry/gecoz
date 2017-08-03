@@ -36,6 +36,23 @@ public class GSSA {
     }
 
     /**
+     * Get the length of a string.
+     * 
+     * @param nstr the index of a string to get the length from.
+     * 
+     * @return the length of nstr string.
+     */
+    public long getLength(int nstr) throws IOException {
+        index();
+        
+        if (nstr < 0 || nstr >= e.length) {
+            throw new IndexOutOfBoundsException("String index " + nstr + " is out of bound");
+        }
+        
+        return nstr == 0 ? e[nstr] : e[nstr] - e[nstr - 1] - 1;
+    }
+    
+    /**
      * Extracts the original string S from the Succinct Suffix Array.
      * 
      * @param buf the buffer where the extracted string is put.
@@ -47,7 +64,7 @@ public class GSSA {
     public void extract(ByteBuffer buf, int nstr, long from) throws IOException {
         index();
 
-        if (nstr < 0 || nstr > e.length) {
+        if (nstr < 0 || nstr >= e.length) {
             throw new IndexOutOfBoundsException("String index " + nstr + " is out of bound");
         }
         
