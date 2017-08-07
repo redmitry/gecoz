@@ -9,7 +9,7 @@ gecoz/java/> mvn install
 This will build a **gecoz/java/nova-gecoz/target/gecotools.jar** file.
 ___
 ```
-**gecoz/java/nova-gecoz/target/> java -jar gecotools.jar -h**
+gecoz/java/nova-gecoz/target/> java -jar gecotools.jar -h
 ```
 Will get the command line help:
 ```
