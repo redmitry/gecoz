@@ -62,9 +62,14 @@ public class GecoIndex {
         } catch(Exception ex) {
             Logger.getLogger(GecoIndex.class.getName()).log(Level.SEVERE, "error reading file: {0}\n", ipath);
             Logger.getLogger(GecoIndex.class.getName()).log(Level.SEVERE, ex.getMessage());
-            System.exit(1);                
+            System.exit(1);
         }
-
+        
+        if (blocks.isEmpty()) {
+            Logger.getLogger(GecoIndex.class.getName()).log(Level.SEVERE, "no data found in file: {0}\n", ipath);
+            System.exit(1);
+        }
+        
         final int max_size = blocks.last().size();
         while (blocks.size() > 1) {
             GecozRefBlock first = blocks.pollFirst();
