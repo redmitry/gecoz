@@ -29,6 +29,7 @@ import es.elixir.bsc.ngs.nova.algo.ssa.GSSA;
 import es.elixir.bsc.ngs.nova.algo.ssa.GSSAIndex;
 import es.elixir.bsc.ngs.nova.algo.tree.HSWTShape;
 import es.elixir.bsc.ngs.nova.algo.tree.HuffmanShapedWaveletTree;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -54,7 +55,7 @@ import java.util.zip.DataFormatException;
  * @author Dmitry Repchevsky
  */
 
-public class GecozFileReader {
+public class GecozFileReader implements Closeable  {
     
     private final Map<GecozRefBlockHeader, Long> headers;
 
@@ -180,6 +181,12 @@ public class GecozFileReader {
         return headers.toString();
     }
     
+    @Override
+    public void close() throws IOException {
+        ref_channel.close();
+        ssa_channel.close();
+    }
+
     public final static boolean checkFormat(Path path) throws IOException {
         try(InputStream in = Files.newInputStream(path, StandardOpenOption.READ)) {
             for (int i = 0, n = GecozRefBlockHeader.MAGIC.length(); i < n; i++) {

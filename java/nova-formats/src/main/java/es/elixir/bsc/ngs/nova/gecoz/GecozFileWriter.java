@@ -166,6 +166,9 @@ public class GecozFileWriter implements Closeable {
             executor.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
         } catch (InterruptedException ex) {
             throw new IOException(ex.getMessage());
+        } finally {
+            ref_channel.close();
+            ssa_channel.close();
         }
     }
     
