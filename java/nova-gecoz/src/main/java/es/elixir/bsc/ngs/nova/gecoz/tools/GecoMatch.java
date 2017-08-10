@@ -68,9 +68,14 @@ public class GecoMatch {
                 Logger.getLogger(GecoMatch.class.getName()).log(Level.SEVERE, "invalid gecoz file format: {0}\n", ipath);
                 System.exit(1); 
             }
+        } catch(IOException ex) {
+            Logger.getLogger(GecoMatch.class.getName()).log(Level.SEVERE, "error reading a file: {0}\n", ipath);
+            Logger.getLogger(GecoMatch.class.getName()).log(Level.SEVERE, ex.getMessage());
+            System.exit(1);
+        }
+        
+        try (GecozFileReader reader = new GecozFileReader(ipath)) {
 
-            GecozFileReader reader = new GecozFileReader(ipath);
-            
             if (header != null) {
                 GecozRefBlockHeader bheader = reader.findBlockHeader(header);
                 if (bheader == null) {

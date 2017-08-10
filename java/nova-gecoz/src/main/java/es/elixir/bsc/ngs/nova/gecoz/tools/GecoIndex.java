@@ -51,7 +51,9 @@ public class GecoIndex {
     static void index(Path ipath, Path opath, Path xpath, int sampling, int threads) {
 
         Logger.getLogger(GecoIndex.class.getName()).log(Level.INFO, "analysing fasta file: {0} ...\n", ipath);
-        
+
+        final long t1 = System.nanoTime();
+
         TreeSet<GecozRefBlock> blocks = new TreeSet<>();
         
         FastaFileReader reader = new FastaFileReader(ipath, true);
@@ -98,7 +100,6 @@ public class GecoIndex {
 
         sorted.addAll(blocks);
 
-        final long t1 = System.nanoTime();
         try (GecozFileWriter writer = new GecozFileWriter(opath, xpath, sampling, threads)) {
             for (GecozRefBlock block : sorted) {
                 writeBlock(reader, writer, block);

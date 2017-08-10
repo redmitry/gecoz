@@ -44,8 +44,7 @@ public class SimpleGFFGenerator {
     
     public static void search(Path ref, Path fasta) {
 
-        try {            
-            GecozFileReader reader = new GecozFileReader(ref);
+        try (GecozFileReader reader = new GecozFileReader(ref)) {
             
             Set<GecozRefBlockHeader> set = reader.getBlockHeaders();
             GecozRefBlockHeader[] bheaders = new GecozRefBlockHeader[set.size()];

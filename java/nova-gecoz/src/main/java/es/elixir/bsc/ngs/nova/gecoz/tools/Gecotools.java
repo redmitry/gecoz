@@ -133,7 +133,7 @@ public class Gecotools {
                     GecoRead.sequence(ipath, header, from, to, opath);
                 } else {
                     // recover entire fasta file
-                    GecoRead.fasta(ipath, opath);
+                    GecoRead.fasta(ipath, opath, th);
                 }
             } else {
                 // compress and (optionally) generate index file
