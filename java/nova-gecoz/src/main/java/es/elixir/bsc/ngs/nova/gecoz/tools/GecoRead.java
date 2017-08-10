@@ -1,12 +1,14 @@
 package es.elixir.bsc.ngs.nova.gecoz.tools;
 
 import es.elixir.bsc.ngs.nova.algo.ssa.GSSA;
+import es.elixir.bsc.ngs.nova.fasta.FastaFileWriter;
+import es.elixir.bsc.ngs.nova.fasta.TFastaSequence;
 import es.elixir.bsc.ngs.nova.gecoz.GecozFileReader;
 import es.elixir.bsc.ngs.nova.gecoz.GecozRefBlockHeader;
-import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.channels.Pipe.SinkChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import static java.nio.file.StandardOpenOption.CREATE;
@@ -14,6 +16,11 @@ import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static java.nio.file.StandardOpenOption.WRITE;
 import java.util.EnumSet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.zip.DataFormatException;
 
 /**
@@ -73,7 +80,7 @@ public class GecoRead {
         }
     }
     
-    static void fasta(Path ipath, Path opath) {
+    static void fasta(Path ipath, Path opath, int threads) {
         
         try {
             if (!Files.exists(ipath) || Files.isDirectory(ipath)) {
@@ -86,11 +93,11 @@ public class GecoRead {
                 System.exit(1);
             }
 
-            GecozFileReader reader = new GecozFileReader(ipath);
-
-            try(BufferedOutputStream out = new BufferedOutputStream(Files.newOutputStream(opath))) {
-                final long t1 = System.nanoTime();
-
+            ExecutorService executor = Executors.newFixedThreadPool(threads);
+            
+            final long t1 = System.nanoTime();
+            try(GecozFileReader reader = new GecozFileReader(ipath);
+                FastaFileWriter writer = new FastaFileWriter(opath, threads)) {
                 for (GecozRefBlockHeader bheader : reader.getBlockHeaders()) {
                     GSSA ssa = reader.read(bheader);
                     if (ssa == null) {
@@ -99,49 +106,71 @@ public class GecoRead {
                     }
 
                     for (String header : bheader.headers) {
-
-                        System.out.print("writing '>" + header + "'...");
-                        out.write('>');
-                        out.write(header.getBytes("UTF8"));
-                        out.write('\n');
-
-                        final int nstr = bheader.findHeader(header);
                         
+                        final int nstr = bheader.findHeader(header);
                         if (nstr < 0) {
                             System.err.println("no sequence found: " + header + " skipping...");
                             continue;
                         }
                         
-                        long from = 0;
-
-                        byte[] arr = new byte[1024 * 1024 * 4]; // 4Mb buffer
-                        ByteBuffer buf = ByteBuffer.wrap(arr);
-                        do {
-                            buf.rewind();
-                            ssa.extract(buf, nstr, from);
-                            for (int i = 0, n = buf.position() & 0xFFFFFFC0; i < n; i += 64) {
-                                out.write(arr, i, 64);
-                                out.write('\n');
-                            }
-                            from += buf.position();
-                        } while (buf.position() == buf.limit());
-                        final int tail = buf.position() & 63;
-                        if (tail > 0) {
-                            out.write(arr, buf.position() - tail, tail);
-                            out.write('\n');                                
-                        }
-                        System.out.println(" ok.");
+                        final int len = (int)ssa.getLength(nstr);
+                        final SinkChannel sink = writer.write(new TFastaSequence(header, (int)len, true));
+                        
+                        executor.submit(new SequenceExtractor(ssa, nstr, len, sink));
                     }
                 }
-                final long t2 = System.nanoTime();
-                System.out.println("finished in " + ((t2 - t1)/1000000) + " ms.");
             } catch (IOException ex) {
                 System.err.println("error extracting fasta to " + opath);
                 System.exit(1);                        
+            } finally {
+                executor.shutdown();
+                try {
+                    executor.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(GecoRead.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
+            final long t2 = System.nanoTime();
+            System.out.println("finished in " + ((t2 - t1)/1000000) + " ms.");
         } catch(IOException | DataFormatException ex) {
             System.err.println("error reading a file: " + ipath);
             System.exit(1);
+        }
+    }
+    
+    public static class SequenceExtractor implements Runnable {
+
+        private final GSSA ssa;
+        private final int nstr;
+        private final int len;
+        private final SinkChannel sink;
+        
+        public SequenceExtractor(GSSA ssa, int nstr, int len, SinkChannel sink) {
+            this.ssa = ssa;
+            this.nstr = nstr;
+            this.len = len;
+            this.sink = sink;
+        }
+        
+        @Override
+        public void run() {
+            
+            try {
+                long from = 0;
+
+                ByteBuffer buf = ByteBuffer.allocate(1024 * 1024 * 4); // 4Mb buffer
+                do {
+                    buf.rewind();
+                    ssa.extract(buf, nstr, from);
+                    buf.limit(buf.position());
+                    buf.rewind();
+                    sink.write(buf);
+                    from += buf.position();
+                } while (from < len);
+            }
+            catch (IOException ex) {
+                Logger.getLogger(GecoIndex.class.getName()).log(Level.SEVERE, ex.getMessage());
+            }
         }
     }
 }
