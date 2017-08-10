@@ -27,7 +27,7 @@ import java.util.logging.Logger;
 
 public class FastaFileWriter implements Closeable {
     
-    public final static int LINE_LENGTH = 40;
+    public final static int LINE_LENGTH = 50;
     
     private final ExecutorService executor;
     private final FileChannel channel;
