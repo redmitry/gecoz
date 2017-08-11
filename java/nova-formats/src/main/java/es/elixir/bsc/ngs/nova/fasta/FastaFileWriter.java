@@ -59,7 +59,30 @@ public class FastaFileWriter implements Closeable {
             }
         });
     }
-    
+
+    /**
+     * <p>
+     * Method to write fasta sequence asynchronously.
+     * Method reserves space in the fasta file and 
+     * returns a SinkChannel to write the sequence.
+     * Method blocks if there is no free thread available in the pool.
+     * </p>
+     * 
+     * The simple <b>synchronous</b> example:
+     * <pre>
+     * {@code
+     *     FastaSequence seq = ...
+     *     try (SinkChannel sink = fastaFileWriter.write(seq)) {
+     *         if (seq.sequence != null) {
+     *             sink.write(ByteBuffer.wrap(seq.sequence));
+     *         }
+     *     }
+     * }
+     * </pre>
+     * @param seq
+     * @return
+     * @throws IOException 
+     */
     public SinkChannel write(TFastaSequence seq) throws IOException {
         
         Logger.getLogger(FastaFileWriter.class.getName()).log(Level.FINER, "writing {0} ({1} bytes)\n", new Object[]{seq.header, Integer.toString(seq.length)});
