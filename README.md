@@ -1,4 +1,4 @@
-### **GE**nome **C**ompression **Z** - **GECOZ** is a set of various NGS formats and algorithms.
+### **GE**nome **CO**mpression **Z** - **GECOZ** is a set of various NGS formats and algorithms.
 
 At the moment it contains an efficient FM-Index implementation.  
 
@@ -35,3 +35,11 @@ examples:
 >java -jar gecotools.jar -i hg38.gcz -s ATTAACCCATGAAAA
 >java -jar gecotools.jar -i hg38.gcz -s chr11 ATTAACCCATGAAAA
 ```
+___
+Using many threads for genome indexing requires proportionally more memory.
+The most demanding part of indexing is a Suffix Array sorting which requires 5n memory.
+Current algorithm merges smaller sequences together, but never exceeds the maximum sequence length.
+For the human genome this means that all blocks are not bigger than the length of chromosome 1.
+For single thread this means ~ 1.2G of memory.
+When there is no enough memory, gecotools tries to decrease number of threads, decreasing memory requirements.
+Gecotools doesn't use more threads than system actually has.
