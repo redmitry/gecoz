@@ -117,27 +117,22 @@ public class SuffixArray {
         if (n > 1) {
             sortLMS(s, sa, Arrays.copyOf(bk1, bk1.length), Arrays.copyOf(bk2, bk2.length));
             compactLMS(sa, sa.length, n);
-            
+
             int l = nameSubstrS(s, sa, n);
-            if (l == sa.length - n) {
-                sortSA0_saka_k(sa, sa.length - n, sa.length);
-            } else if (l == 1) {
-                induceLMS(s, sa, Arrays.copyOf(bk1, bk1.length), Arrays.copyOf(bk2, bk2.length));
-            } else if (l != 0) {
-                sortSA0_sais(sa, sa.length - n, sa.length, l);
-            } else {
-                l = sa.length - n;
-                for(int i = 0; i < n; i++) {
-                    sa[sa[i + l]] = i;
+            if (l > 1) {
+                Arrays.fill(sa, 0, n, 0); // clear buckets
+                if (l == sa.length - n) {
+                    sortSA0_saka_k(sa, sa.length - n, sa.length);
+                } else {
+                    sortSA0_sais(sa, sa.length - n, sa.length, l);
                 }
+                getBackLMS(s, sa, n);
             }
 
-            getBackLMS(s, sa, n);        
             putSuffix(s, sa, n, Arrays.copyOf(bk2, bk2.length));
         }
 
         induceLMS(s, sa, bk1, Arrays.copyOf(bk2, bk2.length));
-
         return bk2;
     }
 
@@ -239,7 +234,7 @@ public class SuffixArray {
             } else {
                 sortSA0_sais(sa, k - n, k, l);            
             }
-
+            
             getBackLMS(sa, k, m, n);
             putSuffix(sa, k, m, n, bk1, bk2, alph);
         }
@@ -260,7 +255,7 @@ public class SuffixArray {
             }
             b0 = b1;
         }
-        
+
         for (int i = 0; i < n; i++) {
             sa[i] = sa[sa[i] + ptr];
         }
@@ -302,11 +297,10 @@ public class SuffixArray {
     private static void putSuffix(final ByteBuffer s, final int[] sa, final int n, int[] bk2) {
 
         Arrays.fill(sa, n, sa.length, 0);
-        
         int ch0 = s.get(sa[n - 1]) & 0xFF;
         int b = bk2[ch0];
         
-        for(int i = n - 1; i >= 0; i--) {
+        for(int i = n - 1; i >= 0; i--) {   
             final int l = sa[i];
             sa[i] = 0;
             final int ch = s.get(l) & 0xFF;
@@ -453,7 +447,9 @@ public class SuffixArray {
      * @param k
      * @param m
      * @param c
-     * @param bk2 the pointer to buckets' ends
+     * @param bk1 the pointer to buckets' start
+     * @param bk2 the pointer to buckets' end
+     * @param l the alphabet size
      */
     private static int fillSA0_sais(final int sa[], final int k, final int m, final int c, final int bk1, final int bk2, final int l) {
         buckets(sa, k, m, c, bk1, bk2, l, true); // get buckets' ends
@@ -948,7 +944,7 @@ public class SuffixArray {
      * 
      * @param n the last index of LMS suffixes in the SA (0 .. n)
      * 
-     * @return - the first LMS names index in the SA (index .. SA.length)
+     * @return the first LMS names index in the SA (index .. SA.length)
      */
     private static int nameSubstrS(final ByteBuffer s, final int[] sa, final int n) {
         
@@ -957,13 +953,8 @@ public class SuffixArray {
         }
         
         final int l = nameSubstrS_saka_k(s, sa, n);
-        if (n < sa.length - n - l) {
-            compactNames_sais(sa, sa.length, n, l);
-            return l == n ? 0 : l;
-        }
-        
-        final int idx = compactNames_saka_k(sa, sa.length);
-        return l == n ? 0 : idx;
+
+        return l <= 1 ? l : compactNames_saka_k(sa, sa.length);
     }
 
     private static int nameSubstrS_sais(final ByteBuffer s, final int[] sa, final int n) {
@@ -973,8 +964,7 @@ public class SuffixArray {
 
         for (int i = 0, ptr1 = 0, len1 = 0; i < n; i++) {
             final int ptr2 = sa[i];
-            sa[i] = 0;
-            final int pos2 = h + (ptr2 >> 1);
+            final int pos = h + (ptr2 >> 1);
             int len2 = getNextLMS(s, ptr2) - ptr2 + 1;
             if (len1 != len2) {
                 len1 = len2;
@@ -986,9 +976,15 @@ public class SuffixArray {
                 }
             }
 
-            sa[pos2] = len2 == 0 ? ~alph : ~++alph;
+            sa[pos] = len2 == 0 ? ~alph : ~++alph;
 
             ptr1 = ptr2;
+        }
+        
+        if (alph++ == 0 || alph == n) {
+            // either all equals (alphabet = 0) or different
+            Arrays.fill(sa, h, sa.length, 0); // clean
+            return 0;
         }
 
         int idx = sa.length;
@@ -1018,19 +1014,31 @@ public class SuffixArray {
             }
         }
 
-        return ++alph == n ? 0 : alph;
+        return alph;
     }
     
+    /**
+     * <p>
+     * Naming LMS substring according SACA-K.
+     * <br/>
+     * If LSM suffixes are equal or all different, no changes performed.
+     * </p>
+     * 
+     * @param s the original string to calculate the suffix array for.
+     * @param sa the array that contains sorted LMS suffixes.
+     * @param n the number of LMS suffixes in the sa (0 .. n - 1).
+     * 
+     * @return 
+     */
     private static int nameSubstrS_saka_k(final ByteBuffer s, final int[] sa, final int n) {
         
         final int h = sa.length >> 1; // part by half
         int alph = -1;
-        
-        for (int i = 0, ptr1 = 0, len1 = 0, pos1 = 0, bk = 0; i < n; i++) {
+
+        for (int i = 0, ptr1 = 0, len1 = 0, bk = 0; i < n; i++) {
             final int ptr2 = sa[i];
-            sa[i] = 0;
-            final int pos2 = h + (ptr2 >> 1);
-            //int len2 = sa[pos2];
+            final int pos = h + (ptr2 >> 1);
+
             int len2 = getNextLMS(s, ptr2) - ptr2 + 1;
             if (len1 != len2) {
                 len1 = len2;
@@ -1043,26 +1051,23 @@ public class SuffixArray {
             }
 
             if (len2 == 0) { // equal substrings
-                sa[pos1] = ~bk;
-                sa[pos2] = ~bk;
-                if (i == bk + 1) {
-                    sa[bk] = -2;
-                    sa[i] = ~alph;
-                } else {
-                    sa[bk]--;
-                }
+                sa[pos] = ~bk;
             } else {
-                sa[i] = ++alph;
-                sa[pos2] = ~i;
+                sa[pos] = ~i;
+                if (i > bk + 1) {
+                    sa[bk] = bk - i;
+                    sa[++bk] = ~alph;
+                }
+                alph++;
                 bk = i;
             }
 
             ptr1 = ptr2;
-            pos1 = pos2;
         }
 
-        return alph + 1;
+        return ++alph == n ? 0 : alph;
     }
+
     /**
      * 
      * @param k the pointer to the first name in the SA0 array
@@ -1083,6 +1088,7 @@ public class SuffixArray {
         if (n <= k - n - l) {
             // compact LMS names and set them usual way (0 .. alph)
             compactNames_sais(sa, k, n, l);
+            Arrays.fill(sa, 0, n, 0); // compactNames_sais() leaves garbage
             return l == n ? 0 : l;
         }
         
@@ -1196,13 +1202,7 @@ public class SuffixArray {
                 if (ptr < 0) {
                     sa[i] = 0;
                     ptr = ~ptr;
-                    final int p;
-                    if (sa[ptr] < 0) {
-                        p = ~sa[ptr + 1];
-                    } else {
-                        p = sa[ptr];
-                        sa[ptr] = 0;
-                    }
+                    final int p = sa[ptr] < 0 ? ~sa[ptr + 1] : sa[ptr];
                     sa[--k] = p;
                     sa[n + p]++;
                 }
@@ -1214,12 +1214,7 @@ public class SuffixArray {
                 if (ptr < 0) {
                     sa[i] = 0;
                     ptr = ~ptr;
-                    if (sa[ptr] < 0) {
-                        sa[--idx] = ~sa[ptr + 1];
-                    } else {
-                        sa[--idx] = sa[ptr];
-                        sa[ptr] = 0;
-                    }
+                    sa[--idx] = sa[ptr] < 0 ? ~sa[ptr + 1] : sa[ptr];
                 }
             }
 
@@ -1229,10 +1224,30 @@ public class SuffixArray {
         }
     }
     
+    /**
+     * <p>
+     * Compacts new string and updates SACA-K alphabet based on 'L' / 'S'.
+     * <br/>
+     * (Nong, G. 2013 5. NAMING SORTED LMS-SUBSTRINGS)
+     * </p>
+     * <pre>
+     * ccccc - previously calculated ~(count) for every sssss character
+     * 
+     *        0            h            k   sa.length
+     * sa[] = |ccccc       |       sssss|...|
+     *                             |
+     *                             return
+     * </pre>
+     * 
+     * @param sa the array to work with.
+     * @param k the last position to store the string.
+     * 
+     * @return the first string position
+     */
     private static int compactNames_saka_k(final int sa[], int k) {
-        
-        final int h = k >> 1; // part by half
 
+        final int h = k >> 1; // part by half
+        
         boolean t = false;
         for (int i = k - 1, b0 = Integer.MIN_VALUE; i >= h; i--) {
             int b1 = sa[i];
