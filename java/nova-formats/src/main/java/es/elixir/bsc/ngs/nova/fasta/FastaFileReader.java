@@ -40,7 +40,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
+ * 
  * @author Dmitry Repchevsky
  */
 
@@ -53,6 +53,15 @@ public class FastaFileReader implements Iterable<FastaSequence> {
         this(path, false);
     }
     
+    /**
+     * FastaFileReader constructor.
+     * 
+     * @param path path to the FASTA file to read.
+     * @param lazy if <i>false</i> - do not read the sequence data.
+     *             Lazy loading may save a lot of memory when one is looking for a
+     *             particular read. Do not use it to read all the sequences, especially
+     *             when reads are short as it may gravely harm performance.
+     */
     public FastaFileReader(Path path, boolean lazy) {
         this.path = path;
         this.lazy = lazy;
@@ -87,34 +96,33 @@ public class FastaFileReader implements Iterable<FastaSequence> {
                     buf.put(seq.sequence, 0, Math.min(seq.sequence.length, buf.remaining()));
         }
         
-        FileChannel channel = FileChannel.open(path, EnumSet.of(READ));
-        
-        if (seq.multiline) {
-            if (buf == null) {
-                buf = ByteBuffer.allocate(seq.length);
-            }
+        try (FileChannel channel = FileChannel.open(path, EnumSet.of(READ))) {
+            if (seq.multiline) {
+                if (buf == null) {
+                    buf = ByteBuffer.allocate(seq.length);
+                }
 
-            channel.position(seq.position);
-            try (InputStream in = new BufferedInputStream(Channels.newInputStream(channel))) {
-                for (int i = 0, ch = in.read(); i < seq.length; ch = in.read()) {
-                    if (ch != '\r' && ch != '\n') {
-                        i++;
-                        buf.put((byte)ch);
+                channel.position(seq.position);
+                try (InputStream in = new BufferedInputStream(Channels.newInputStream(channel))) {
+                    for (int i = 0, ch = in.read(); i < seq.length; ch = in.read()) {
+                        if (ch != '\r' && ch != '\n') {
+                            i++;
+                            buf.put((byte)ch);
+                        }
                     }
                 }
+                return buf;
             }
-            return buf;
+
+            if (buf == null) {
+                return channel.map(FileChannel.MapMode.READ_ONLY, seq.position, seq.length);
+            }
+
+            final int limit = buf.limit();
+            buf.limit(buf.position() + seq.length);
+            channel.read(buf, seq.position);
+            buf.limit(limit);
         }
-        
-        if (buf == null) {
-            return channel.map(FileChannel.MapMode.READ_ONLY, seq.position, seq.length);
-        }
-    
-        final int limit = buf.limit();
-        buf.limit(buf.position() + seq.length);
-        channel.read(buf, seq.position);
-        buf.limit(limit);
-        
         return buf;
     }
 }
