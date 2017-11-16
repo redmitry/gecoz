@@ -43,3 +43,24 @@ For the human genome this means that all blocks are not bigger than the length o
 For single thread this means ~ 1.2G of memory.
 When there is no enough memory, gecotools tries to decrease number of threads, decreasing memory requirements.
 Gecotools doesn't use more threads than system actually has.
+___
+GECOZ has several maven submodules that someone may found useful:
+- nova-io - basic input/output classes such as BitInputStream and BitOutputStream
+- nova-gzip - pure java GZipFileInputStream implementation with BGZF support.
+- nova-formats - simple BAM file reader. FASTA reader/writer
+- nova-algo - FM-Index implementation: Suffix Array, Huffman, Deflate, Huffman Shaped Wavelet Tree.
+
+These libraries can be imported via maven:
+```xml
+<dependencies>
+  <dependency>
+    <groupId>es.elixir.bsc.ngs</groupId>
+    <artifactId>nova-algo</artifactId>
+    <version>0.2-SNAPSHOT</version>
+...
+<repositories>
+  <repository>
+    <id>gecoz</id>
+    <url>https://raw.github.com/inab/gecoz/maven/</url>
+  </repository>
+```
