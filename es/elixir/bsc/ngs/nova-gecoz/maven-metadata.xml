@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>es.elixir.bsc.ngs</groupId>
+  <artifactId>nova-gecoz</artifactId>
+  <versioning>
+    <versions>
+      <version>0.2-SNAPSHOT</version>
+    </versions>
+    <lastUpdated>20171116175249</lastUpdated>
+  </versioning>
+</metadata>
