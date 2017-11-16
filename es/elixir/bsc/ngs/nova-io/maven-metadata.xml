@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>es.elixir.bsc.ngs</groupId>
+  <artifactId>nova-io</artifactId>
+  <versioning>
+    <versions>
+      <version>0.2-SNAPSHOT</version>
+    </versions>
+    <lastUpdated>20171116170920</lastUpdated>
+  </versioning>
+</metadata>
