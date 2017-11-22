@@ -4,6 +4,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -82,6 +84,24 @@ public class FastaIterator implements Iterator<FastaSequence>, AutoCloseable {
                 }
                 posnew++;
             } while((ch = in.read()) >= 0 && ch != '>' && ch !='@' && ch !='+');
+            
+            if (ch == '+') {
+                // skip qualities
+                int qlines = -1;
+                int qlength = 0;
+                do {
+                    while ((ch = in.read()) >= 0 && ch != '\r' && ch != '\n') {
+                        qlength++;
+                        posnew++;
+                    }
+                    posnew++;
+                    qlines++;
+                } while(qlength < length && qlines < lines);
+                
+                if (length != qlength) {
+                    Logger.getLogger(FastaIterator.class.getSimpleName()).log(Level.WARNING, "different sequence and qualities lengths ''{0}'' ({1} bytes)\n", new Object[]{length, qlength});
+                }
+            }
         } catch (IOException ex) {
             return null;
         }
