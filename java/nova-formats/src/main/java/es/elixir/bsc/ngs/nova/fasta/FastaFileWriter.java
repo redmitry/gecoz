@@ -98,7 +98,7 @@ public class FastaFileWriter implements Closeable {
         final ByteBuffer out = channel.map(FileChannel.MapMode.READ_WRITE, pos, size);
         channel.position(pos + size);
                 
-        final Pipe pipe = Pipe.open();
+        final Pipe pipe = Pipe.open(); // JDK-6907260 ?
 
         executor.submit(new FastaSequenceWriter(pipe.source(), out, seq.multiline));
 
@@ -143,6 +143,12 @@ public class FastaFileWriter implements Closeable {
                 } while (out.remaining() > 0);
             } catch (Throwable ex) {
                 Logger.getLogger(FastaFileWriter.class.getName()).log(Level.SEVERE, null, ex);
+            } finally {
+                try {
+                    src.close();
+                } catch (IOException ex) {
+                    Logger.getLogger(FastaFileWriter.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
         }
     }
