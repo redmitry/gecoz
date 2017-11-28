@@ -99,8 +99,8 @@ public class FastaFileWriter implements Closeable {
         channel.position(pos + size);
                 
         final Pipe pipe = Pipe.open();
-        
-        executor.submit(new FastaSequenceWriter(pipe.source(), out));
+
+        executor.submit(new FastaSequenceWriter(pipe.source(), out, seq.multiline));
 
         return pipe.sink();
     }
@@ -122,11 +122,13 @@ public class FastaFileWriter implements Closeable {
         private final SourceChannel src;
         private final ByteBuffer out;
         
-        public FastaSequenceWriter(SourceChannel src, ByteBuffer out) {
+        public FastaSequenceWriter(SourceChannel src, ByteBuffer out, boolean multiline) {
             this.src = src;
             this.out = out;
             
-            out.limit(LINE_LENGTH);
+            if (multiline) {
+                out.limit(LINE_LENGTH);
+            }
         }
         
         @Override
