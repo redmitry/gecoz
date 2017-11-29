@@ -60,8 +60,8 @@ public class Gecotools {
             "-t                    - use n threads \n" +
             "-v [level]            - verbose (default = WARNING) \n\n" +
             "examples:\n\n" +
-            ">java -jar gecotools.jar -t 8 -i hg38.fa -o hg38.gcz\n" +
-            ">java -jar gecotools.jar -i hg38.gcz -o hg38.fasta\n" +
+            ">java -Xmx8g -jar gecotools.jar -t 4 -i hg38.fa -o hg38.gcz\n" +
+            ">java -jar gecotools.jar -t 4 -i hg38.gcz -o hg38.fasta\n" +
             ">java -jar gecotools.jar -i hg38.gcz -o chr15.seq chr15\n" +
             ">java -jar gecotools.jar -i hg38.gcz -c ATTAACCCATGAAAA\n" +
             ">java -jar gecotools.jar -i hg38.gcz -s ATTAACCCATGAAAA\n" +
