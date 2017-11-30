@@ -28,6 +28,7 @@ package es.elixir.bsc.ngs.nova.gzip;
 import es.elixir.bsc.ngs.nova.algo.deflate.Inflater;
 import es.elixir.bsc.ngs.nova.io.DataReaderHelper;
 import es.elixir.bsc.ngs.nova.io.FileChannelBitInputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -48,8 +49,8 @@ public class GZipFileInputStream extends InputStream {
 
     private long block_pos;
     
-    public GZipFileInputStream(File bam) throws IOException {
-        final FileChannel channel = new FileInputStream(bam).getChannel();
+    public GZipFileInputStream(File file) throws IOException {
+        final FileChannel channel = new FileInputStream(file).getChannel();
         in = new FileChannelBitInputStream(channel);
         inflater = new Inflater(in, crc = new java.util.zip.CRC32());
         readHeader();
@@ -164,8 +165,12 @@ public class GZipFileInputStream extends InputStream {
         if (isize == 0) {
             return -1;
         }
-        block_pos = in.getPosition();
-        return readHeader();
+
+        try {
+            return readHeader();
+        } catch(EOFException ex) {}
+        
+        return -1; // EOF
     }
     
     private int readHeader() throws IOException {

@@ -26,6 +26,7 @@
 package es.elixir.bsc.ngs.nova.gzip;
 
 import es.elixir.bsc.ngs.nova.io.DataReaderHelper;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.zip.ZipException;
@@ -55,8 +56,12 @@ public class GZipHeader {
     public final static int SLEN = 0x02;
     public final int dsize;
     
-    public GZipHeader(InputStream in) throws IOException, ZipException {
-        if (in.read() != ID1 ||
+    public GZipHeader(InputStream in) throws IOException {
+        final int id1 = in.read();
+        if (id1 < 0) {
+            throw new EOFException();
+        }
+        if (id1 != ID1 ||
             in.read() != ID2) {
             throw new ZipException("invalid gzip header");
         }
