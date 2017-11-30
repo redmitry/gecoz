@@ -58,21 +58,25 @@ public class FileChannelBitInputStream extends InputStream implements BitInputSt
     
     private void map(int size) throws IOException {
         final long remain = channel.size() - channel.position();
-        int len = (int)Math.min(remain, size);
-        if (len >= 8) {
-            len = len - len % 8;
-            total_bits = len * 8;
+        if (remain > 0) {
+            int len = (int)Math.min(remain, size);
+            if (len >= 8) {
+                len = len - len % 8;
+                total_bits = len * 8;
 
-            buf = channel.map(FileChannel.MapMode.READ_ONLY, channel.position(), len);
-            buf.order(ByteOrder.LITTLE_ENDIAN);
-        } else {
-            total_bits = len * 8;
-            bits_left = (byte)total_bits;
+                buf = channel.map(FileChannel.MapMode.READ_ONLY, channel.position(), len);
+                buf.order(ByteOrder.LITTLE_ENDIAN);
+            } else {
+                total_bits = len * 8;
+                bits_left = (byte)total_bits;
 
-            ByteBuffer buffer = ByteBuffer.allocate(8);
-            buffer.order(ByteOrder.LITTLE_ENDIAN);
-            channel.read(buffer);
-            value = buffer.getLong();
+                ByteBuffer buffer = ByteBuffer.allocate(8);
+                buffer.order(ByteOrder.LITTLE_ENDIAN);
+                buffer.position(8 - len);
+                channel.read(buffer);
+                buffer.rewind();
+                value = buffer.getLong();
+            }
         }
     }
 
@@ -194,6 +198,10 @@ public class FileChannelBitInputStream extends InputStream implements BitInputSt
             return (int) (readBits(8) & 0xFF);
         }
         
+        if (channel.size() == channel.position()) {
+            return -1; // EOF
+        }
+
         // assert bits_left == 0
         channel.position(channel.position() + buf.limit());
         map(buf.limit());
