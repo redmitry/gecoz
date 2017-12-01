@@ -110,7 +110,7 @@ public class GecozFileWriter implements Closeable {
         
         final int threads = Math.min(th,Runtime.getRuntime().availableProcessors());
         
-        Logger.getLogger(GecozFileWriter.class.getName()).log(Level.FINER, "writer use {0} threads\n", threads);
+        Logger.getLogger(GecozFileWriter.class.getName()).log(Level.FINER, "writer uses {0} threads\n", threads);
 
         executor = new WriterPoolExecutor(threads);
     }
@@ -215,8 +215,6 @@ public class GecozFileWriter implements Closeable {
                     ex.printStackTrace(System.err);
                     System.exit(-1);
                 }
-
-                Logger.getLogger(GecozFileWriter.class.getName()).log(Level.SEVERE, "decreasing number of working threads to {0}\n", sz);
 
                 try {
                     getQueue().put(new BlockWriterFutureTask(task.runnable));

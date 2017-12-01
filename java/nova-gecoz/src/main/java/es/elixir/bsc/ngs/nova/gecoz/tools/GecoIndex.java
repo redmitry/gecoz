@@ -56,56 +56,59 @@ public class GecoIndex {
 
         TreeSet<GecozRefBlock> blocks = new TreeSet<>();
         
-        FastaFileReader reader = new FastaFileReader(ipath, true);
-        try (FastaIterator iter = reader.iterator()) {
-            while(iter.hasNext()) {
-                blocks.add(new GecozRefBlock(iter.next()));
+        try {
+            FastaFileReader reader = new FastaFileReader(ipath, true);
+            try (FastaIterator iter = reader.iterator()) {
+                while(iter.hasNext()) {
+                    blocks.add(new GecozRefBlock(iter.next()));
+                }
             }
+            
+            if (blocks.isEmpty()) {
+                Logger.getLogger(GecoIndex.class.getName()).log(Level.SEVERE, "no data found in file: {0}\n", ipath);
+                System.exit(1);
+            }
+
+            final int max_size = blocks.last().size();
+            while (blocks.size() > 1) {
+                GecozRefBlock first = blocks.pollFirst();
+                GecozRefBlock second = blocks.pollFirst();
+                final int size = first.size() + second.size();
+                if (size > 0 && size <= max_size) {
+                    first.add(second.sequences);
+                    blocks.add(first);
+                } else {
+                    blocks.add(first);
+                    blocks.add(second);
+                    break;
+                }
+            }
+
+            // sort blocks to put those that have largest sequence first
+            TreeSet<GecozRefBlock> sorted = new TreeSet(new Comparator<GecozRefBlock>() {
+                @Override
+                public int compare(GecozRefBlock o1, GecozRefBlock o2) {
+                    if (o1.sequences.first().length != o2.sequences.first().length) {
+                        return o1.sequences.first().length > o2.sequences.first().length ? -1 : 1;
+                    }
+                    return o1.compareTo(o2);
+                }
+            });
+
+            sorted.addAll(blocks);
+
+            try (GecozFileWriter writer = new GecozFileWriter(opath, xpath, sampling, threads)) {
+                for (GecozRefBlock block : sorted) {
+                    writeBlock(reader, writer, block);
+                }
+            } catch (Throwable th) {
+                th.printStackTrace(System.err);
+                System.exit(1);
+            }
+
         } catch(Exception ex) {
             Logger.getLogger(GecoIndex.class.getName()).log(Level.SEVERE, "error reading file: {0}\n", ipath);
             Logger.getLogger(GecoIndex.class.getName()).log(Level.SEVERE, ex.getMessage());
-            System.exit(1);
-        }
-        
-        if (blocks.isEmpty()) {
-            Logger.getLogger(GecoIndex.class.getName()).log(Level.SEVERE, "no data found in file: {0}\n", ipath);
-            System.exit(1);
-        }
-        
-        final int max_size = blocks.last().size();
-        while (blocks.size() > 1) {
-            GecozRefBlock first = blocks.pollFirst();
-            GecozRefBlock second = blocks.pollFirst();
-            final int size = first.size() + second.size();
-            if (size > 0 && size <= max_size) {
-                first.add(second.sequences);
-                blocks.add(first);
-            } else {
-                blocks.add(first);
-                blocks.add(second);
-                break;
-            }
-        }
-        
-        // sort blocks to put those that have largest sequence first
-        TreeSet<GecozRefBlock> sorted = new TreeSet(new Comparator<GecozRefBlock>() {
-            @Override
-            public int compare(GecozRefBlock o1, GecozRefBlock o2) {
-                if (o1.sequences.first().length != o2.sequences.first().length) {
-                    return o1.sequences.first().length > o2.sequences.first().length ? -1 : 1;
-                }
-                return o1.compareTo(o2);
-            }
-        });
-
-        sorted.addAll(blocks);
-
-        try (GecozFileWriter writer = new GecozFileWriter(opath, xpath, sampling, threads)) {
-            for (GecozRefBlock block : sorted) {
-                writeBlock(reader, writer, block);
-            }
-        } catch (Throwable th) {
-            th.printStackTrace(System.err);
             System.exit(1);
         }
 

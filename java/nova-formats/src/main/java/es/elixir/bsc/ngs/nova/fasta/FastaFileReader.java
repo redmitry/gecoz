@@ -25,6 +25,7 @@
 
 package es.elixir.bsc.ngs.nova.fasta;
 
+import es.elixir.bsc.ngs.nova.gzip.GZipFileInputStream;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,6 +39,7 @@ import static java.nio.file.StandardOpenOption.READ;
 import java.util.EnumSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.zip.ZipException;
 
 /**
  * 
@@ -47,9 +49,10 @@ import java.util.logging.Logger;
 public class FastaFileReader implements Iterable<FastaSequence> {
     
     private final Path path;
+    private final boolean gzip;
     private final boolean lazy;
 
-    public FastaFileReader(Path path) {
+    public FastaFileReader(Path path) throws IOException {
         this(path, false);
     }
     
@@ -58,20 +61,32 @@ public class FastaFileReader implements Iterable<FastaSequence> {
      * 
      * @param path path to the FASTA file to read.
      * @param lazy if <i>false</i> - do not read the sequence data.
-     *             Lazy loading may save a lot of memory when one is looking for a
+     *             Lazy loading is ignored when FASTA file is gzipped.
+     *             Lazy loading may save a memory when one is looking for a
      *             particular read. Do not use it to read all the sequences, especially
      *             when reads are short as it may gravely harm performance.
+     * @throws java.io.IOException
      */
-    public FastaFileReader(Path path, boolean lazy) {
+    public FastaFileReader(Path path, boolean lazy) throws IOException {
+        
+        boolean gzip;
+        try (GZipFileInputStream in = new GZipFileInputStream(path.toFile())) {
+            gzip = true;
+        } catch (ZipException ex) {
+            gzip = false;
+        }
+        this.gzip = gzip;
         this.path = path;
         this.lazy = lazy;
     }
     
     @Override
     public FastaIterator iterator() {
+        
         try {
-            InputStream in = new BufferedInputStream(Files.newInputStream(path, StandardOpenOption.READ));
-            return new FastaIterator(in, lazy);
+            InputStream in = gzip ? new GZipFileInputStream(path.toFile()) :
+                    new BufferedInputStream(Files.newInputStream(path, StandardOpenOption.READ));
+            return new FastaIterator(in, gzip ? false : lazy);
         } catch (IOException ex) {
             return null;
         }
@@ -89,39 +104,53 @@ public class FastaFileReader implements Iterable<FastaSequence> {
      */
     public ByteBuffer read(ByteBuffer buf, FastaSequence seq) throws IOException {
         
-        Logger.getLogger(FastaFileReader.class.getSimpleName()).log(Level.INFO, "reading ''{0}'' ({1} bytes)\n", new Object[]{seq.header, seq.length});
+        Logger.getLogger(FastaFileReader.class.getSimpleName()).log(Level.FINE, "reading ''{0}'' ({1} bytes)\n", new Object[]{seq.header, seq.length});
         
         if (seq.sequence != null) {
             return buf == null ? ByteBuffer.wrap(seq.sequence) : 
                     buf.put(seq.sequence, 0, Math.min(seq.sequence.length, buf.remaining()));
         }
         
-        try (FileChannel channel = FileChannel.open(path, EnumSet.of(READ))) {
+        InputStream in;
+        if (gzip) {
+            in = new GZipFileInputStream(path.toFile());
+            in.skip(seq.position);            
+        } else {
+            FileChannel channel = FileChannel.open(path, EnumSet.of(READ));
+
             if (seq.multiline) {
-                if (buf == null) {
-                    buf = ByteBuffer.allocate(seq.length);
-                }
-
                 channel.position(seq.position);
-                try (InputStream in = new BufferedInputStream(Channels.newInputStream(channel))) {
-                    for (int i = 0, ch = in.read(); i < seq.length; ch = in.read()) {
-                        if (ch != '\r' && ch != '\n') {
-                            i++;
-                            buf.put((byte)ch);
-                        }
+                in = new BufferedInputStream(Channels.newInputStream(channel));
+            } else {
+                try {
+                    if (buf == null) {
+                        return channel.map(FileChannel.MapMode.READ_ONLY, seq.position, seq.length);
+                    } else {
+                        final int limit = buf.limit();
+                        buf.limit(buf.position() + seq.length);
+                        channel.read(buf, seq.position);
+                        buf.limit(limit);
+                        return buf;
                     }
+                } finally {
+                    channel.close();
                 }
-                return buf;
             }
+        }
 
+        try {
             if (buf == null) {
-                return channel.map(FileChannel.MapMode.READ_ONLY, seq.position, seq.length);
+                buf = ByteBuffer.allocate(seq.length);
             }
 
-            final int limit = buf.limit();
-            buf.limit(buf.position() + seq.length);
-            channel.read(buf, seq.position);
-            buf.limit(limit);
+            for (int i = 0, ch = in.read(); i < seq.length; ch = in.read()) {
+                if (ch != '\r' && ch != '\n') {
+                    i++;
+                    buf.put((byte)ch);
+                }
+            }
+        } finally {
+            in.close();
         }
         return buf;
     }
