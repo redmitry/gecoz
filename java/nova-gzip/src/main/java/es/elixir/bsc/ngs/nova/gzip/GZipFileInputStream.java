@@ -113,23 +113,26 @@ public class GZipFileInputStream extends InputStream {
     /**
      * Skips over and discards n bytes of data from this input stream.
      * 
-     * @param n - the number of bytes to be skipped.
+     * @param n the number of bytes to be skipped.
      * 
-     * @return the actual number of bytes skipped or -1 if the end of stream is reached.
+     * @return n or -1 if the end of stream is reached.
      * 
      * @throws IOException 
      */
     @Override
     public long skip(final long n) throws IOException {
-        final long l = inflater.skip(n);
-        if (l < 0) {
-            if (readFooter() == 0) {
-                return skip(n);
-            }
-        } else if (l < n) {
-            return l + skip(n - l);
+        long m = n;
+        long l;
+        while ((l = inflater.skip(m)) < m) {
+            if (l < 0) {
+                if (readFooter() < 0) {
+                    return -1;
+                }
+            } else {
+                m -= l;
+            }    
         }
-        return l;
+        return n;
     }
 
     @Override
