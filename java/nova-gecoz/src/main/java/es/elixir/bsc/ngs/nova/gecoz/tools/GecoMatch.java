@@ -89,17 +89,19 @@ public class GecoMatch {
                     System.exit(1);
                 }
 
-                final int nstr = bheader.findHeader(header);
                 
                 final long t1 = System.nanoTime();
                 long[][] res = ssa.find(pattern.getBytes("UTF8"));
                 final long t2 = System.nanoTime();
 
-                if (res != null && res.length > 0 && res[nstr] != null && res[nstr].length > 0) {
-                    System.out.println(">" + header + " found : " + res[nstr].length);
-                    if (match) {
-                        for (int i = 0; i < res[nstr].length; i++) {
-                            System.out.println(res[nstr][i]);
+                if (res != null && res.length > 0) {
+                    final int nstr = bheader.findHeader(header);
+                    if (res[nstr] != null && res[nstr].length > 0) {
+                        System.out.println(">" + header + " found : " + res[nstr].length);
+                        if (match) {
+                            for (int i = 0; i < res[nstr].length; i++) {
+                                System.out.println(res[nstr][i]);
+                            }
                         }
                     }
                 }
