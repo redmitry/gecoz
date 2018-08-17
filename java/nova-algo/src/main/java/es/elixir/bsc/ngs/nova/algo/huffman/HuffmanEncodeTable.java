@@ -70,7 +70,12 @@ public class HuffmanEncodeTable {
                 }
             }
 
-            if (min1 == Long.MAX_VALUE || min2 == Long.MAX_VALUE) {
+            if (min2 == Long.MAX_VALUE) {
+                if (i == 1) {
+                    // all characters are the same, but we still need one bit
+                    bit_lengths[idx1] = 1;
+                    table[idx1] = 1;
+                }
                 break;
             }
 

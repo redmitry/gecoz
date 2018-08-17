@@ -53,12 +53,19 @@ public class DeflateEncodeTable extends HuffmanEncodeTable {
     
     private void restrict_lengths(final long[] counts) {
 
+        long count = 0;
+
         final int[] bl_count = new int[bit_lengths.length];
         for (int i = 0, n = bit_lengths.length; i < n; i++) {
             final int bl = bit_lengths[i];
             if (bl > 0) {
+                count += bl;
                 bl_count[bl]++;
             }
+        }
+
+        if (count <= 1) {
+            return; // special case where all characters are the same
         }
 
         int nodes = 1; // non-leaf nodes at the level 1;
