@@ -121,7 +121,7 @@ public class DeflateEncodeTable extends HuffmanEncodeTable {
                 
                 for (int level = MAX_BITS; nodes < 0 && level > 0; level--) {
                     long bit_length = (long)(level - 1) << 48;
-                    for (int i = list.length - 1; nodes < 0 && i >= 0; i++) {
+                    for (int i = list.length - 1; nodes < 0 && i >= 0; i--) {
                         final byte bl = (byte)(list[i] >>> 48);
                         if (bl == level) {
                             list[i] = list[i] & 0xFF00FFFFFFFFFFFFL | bit_length;
