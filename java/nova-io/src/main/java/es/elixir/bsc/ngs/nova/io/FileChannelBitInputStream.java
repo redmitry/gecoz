@@ -68,14 +68,11 @@ public class FileChannelBitInputStream extends InputStream implements BitInputSt
                 buf.order(ByteOrder.LITTLE_ENDIAN);
             } else {
                 total_bits = len * 8;
-                bits_left = (byte)total_bits;
 
-                ByteBuffer buffer = ByteBuffer.allocate(8);
-                buffer.order(ByteOrder.LITTLE_ENDIAN);
-                buffer.position(8 - len);
-                channel.read(buffer);
-                buffer.rewind();
-                value = buffer.getLong();
+                buf = ByteBuffer.allocate(8);
+                buf.order(ByteOrder.LITTLE_ENDIAN);
+                channel.read(buf);
+                buf.rewind();
             }
         }
     }
@@ -108,13 +105,18 @@ public class FileChannelBitInputStream extends InputStream implements BitInputSt
             return last;
         }
 
-        if (total_bits < nbits) {
-            channel.position(channel.position() + buf.limit());
-            map(buf.limit());
-            total_bits += bits_left;
+        final int next;
+        if (total_bits >= nbits) {
+            next = buf.getShort(buf.position());
+        } else {
+            final ByteBuffer buffer = ByteBuffer.allocate(2);
+            buffer.order(ByteOrder.LITTLE_ENDIAN);
+            
+            while (buffer.hasRemaining() && 
+                   channel.read(buffer, channel.position() + buf.limit() + buffer.position()) >= 0) {
+            }
+            next = buffer.getShort(0);
         }
-
-        final short next = buf.getShort(buf.position());
         return last | (next << bits_left);
     }
     
