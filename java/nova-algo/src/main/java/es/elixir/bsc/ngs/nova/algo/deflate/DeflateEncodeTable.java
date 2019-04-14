@@ -38,20 +38,29 @@ import java.util.Arrays;
 
 public class DeflateEncodeTable extends HuffmanEncodeTable {
     
-    private final static int MAX_BITS = 15;
+    private final static byte MAX_BITS = 15;
     
     public DeflateEncodeTable(final long[] counts) {
-        super(Arrays.copyOf(counts, counts.length));
-        restrict_lengths(counts);
-        remap_codes();
+        this(counts, MAX_BITS);
     }
-    
+
     public DeflateEncodeTable(final byte[] bit_lengths) {
         super(bit_lengths);
-        remap_codes();
+        remap_codes(MAX_BITS);
+    }
+
+    public DeflateEncodeTable(final long[] counts, final byte max_bits) {
+        super(Arrays.copyOf(counts, counts.length));
+        restrict_lengths(counts, max_bits);
+        remap_codes(max_bits);
     }
     
-    private void restrict_lengths(final long[] counts) {
+    public DeflateEncodeTable(final byte[] bit_lengths, final byte max_bits) {
+        super(bit_lengths);
+        remap_codes(max_bits);
+    }
+    
+    private void restrict_lengths(final long[] counts, final byte max_bits) {
 
         long count = 0;
 
@@ -69,7 +78,7 @@ public class DeflateEncodeTable extends HuffmanEncodeTable {
         }
 
         int nodes = 1; // non-leaf nodes at the level 1;
-        for (int i = 1; i <= MAX_BITS && nodes > 0; i++) {
+        for (int i = 1; i <= max_bits && nodes > 0; i++) {
             nodes <<= 1;
             if (bl_count[i] != 0) {
                 nodes -= bl_count[i];
@@ -82,8 +91,8 @@ public class DeflateEncodeTable extends HuffmanEncodeTable {
             
             nodes = -nodes; // we already have some 'empty' non-leaf nodes
             for (int i = 0, n = bit_lengths.length; i < n; i++) {
-                if (bit_lengths[i] > MAX_BITS) {
-                    bit_lengths[i] = MAX_BITS;
+                if (bit_lengths[i] > max_bits) {
+                    bit_lengths[i] = max_bits;
                     nodes++;
                 }
             }
@@ -100,8 +109,8 @@ public class DeflateEncodeTable extends HuffmanEncodeTable {
 
             do {
                 loop:
-                for (int i = MAX_BITS - 1; i > 0; i--) {
-                    for (int level = i; level < MAX_BITS; level++) {
+                for (int i = max_bits - 1; i > 0; i--) {
+                    for (int level = i; level < max_bits; level++) {
                         long bit_length = (long)(level + 1) << 48;
                         for (int j = 0, n = list.length; j < n; j++) {
                             final byte bl = (byte)(list[j] >>> 48);
@@ -110,7 +119,7 @@ public class DeflateEncodeTable extends HuffmanEncodeTable {
                                 
                                 // moving the leaf top-down releases a node on the leaf level
                                 // what gives us 2^n leaves at the MAX_BITS level
-                                nodes -= 1 << (MAX_BITS - 1 - level);
+                                nodes -= 1 << (max_bits - 1 - level);
                                 if (nodes <= 0) {
                                     break loop;
                                 }
@@ -119,13 +128,13 @@ public class DeflateEncodeTable extends HuffmanEncodeTable {
                     }
                 }
                 
-                for (int level = MAX_BITS; nodes < 0 && level > 0; level--) {
+                for (int level = max_bits; nodes < 0 && level > 0; level--) {
                     long bit_length = (long)(level - 1) << 48;
                     for (int i = list.length - 1; nodes < 0 && i >= 0; i--) {
                         final byte bl = (byte)(list[i] >>> 48);
                         if (bl == level) {
                             list[i] = list[i] & 0xFF00FFFFFFFFFFFFL | bit_length;
-                            nodes += 1 << (MAX_BITS - level);
+                            nodes += 1 << (max_bits - level);
                         }
                     }
                 }
@@ -138,8 +147,8 @@ public class DeflateEncodeTable extends HuffmanEncodeTable {
         }
     }
     
-    private void remap_codes() {
-        final int[] bl_count = new int[MAX_BITS + 1];
+    private void remap_codes(final byte max_bits) {
+        final int[] bl_count = new int[max_bits + 1];
         for (int i = 0, n = bit_lengths.length; i < n; i++) {
             final int bl = bit_lengths[i];
             if (bl > 0) {
@@ -147,9 +156,9 @@ public class DeflateEncodeTable extends HuffmanEncodeTable {
             }
         }
 
-        final int[] next_code = new int[MAX_BITS + 1];
+        final int[] next_code = new int[max_bits + 1];
 
-        for (int bits = 1, code = 0; bits <= MAX_BITS; bits++) {
+        for (int bits = 1, code = 0; bits <= max_bits; bits++) {
             code = (code + bl_count[bits - 1]) << 1;
             next_code[bits] = code;
         }
