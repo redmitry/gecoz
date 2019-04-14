@@ -133,7 +133,7 @@ public class DeflateEncodeTable extends HuffmanEncodeTable {
             
             // put bit_lengths back
             for (int i = 0, n = bit_lengths.length; i < n; i++) {
-                bit_lengths[(int)(list[i] & 0xFF)] = (byte)(list[i] >>> 48);
+                bit_lengths[(int)(list[i] & 0xFFFF)] = (byte)(list[i] >>> 48);
             }
         }
     }
