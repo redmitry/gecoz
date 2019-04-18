@@ -25,17 +25,17 @@
 
 package es.elixir.bsc.ngs.nova.bam;
 
+import es.elixir.bsc.ngs.nova.io.DataReaderHelper;
+import es.elixir.bsc.ngs.nova.sam.MD;
+import es.elixir.bsc.ngs.nova.sam.SAMRecord;
+import es.elixir.bsc.ngs.nova.sam.SAMTag;
+import es.elixir.bsc.ngs.nova.sam.SequenceRecord;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.regex.Matcher;
 import java.util.zip.DataFormatException;
-import es.elixir.bsc.ngs.nova.sam.SequenceRecord;
-import es.elixir.bsc.ngs.nova.io.DataReaderHelper;
-import es.elixir.bsc.ngs.nova.sam.MD;
-import es.elixir.bsc.ngs.nova.sam.SAMRecord;
-import es.elixir.bsc.ngs.nova.sam.SAMTag;
 
 /**
  * @author Dmitry Repchevsky
@@ -45,13 +45,39 @@ public class BAMAlignment extends SAMRecord implements SequenceRecord {
     
     private final char[] VAL_TYPE = {'A','c','C','s','S','i','I','f','Z','H','B'};
     
-    public int refID;
-    public int l_seq;
-    public int next_refID;
-    public int next_pos;
+    private int refID;
+    private int l_seq;
+    private int next_refID;
+    private int next_pos;
+    private short bin;
+    
     private byte[] seq;
-    public byte[] qual;
-    public byte[] auxiliary;
+    private byte[] qual;
+    private byte[] auxiliary;
+    
+    /**
+     * Returns BAI index bin as in SAMv1 4.2.1
+     * 
+     * @return index bin
+     */
+    public int getBin() {
+        if (pos == 0) {
+            return 4680; // reg2bin(-1, 0)
+        }
+        return BAI.reg2bin(pos - 1, getPositionEnd());
+    }
+
+    public int getRefID() {
+        return refID;
+    }
+    
+    public int getNextRefID() {
+        return next_refID;
+    }
+    
+    public int getNextPosD() {
+        return next_pos;
+    }
     
     @Override
     public String getSequence() {
@@ -141,7 +167,7 @@ public class BAMAlignment extends SAMRecord implements SequenceRecord {
         
         if (md != null && md.length() > 0) {
             int idx = 0;
-            Matcher m = MD.pattern.matcher(md);
+            Matcher m = MD.PATTERN.matcher(md);
             while (m.find()) {
                 final String g1 = m.group(1);
                 final String g2 = m.group(2);
@@ -188,7 +214,12 @@ public class BAMAlignment extends SAMRecord implements SequenceRecord {
         return null;
     }
     
-    public static BAMAlignment decode(InputStream in) throws IOException, DataFormatException {
+    public void write() {
+        
+    }
+
+    public static BAMAlignment decode(final InputStream in) 
+                        throws IOException, DataFormatException {
         
         BAMAlignment alignment = new BAMAlignment();
         final long block_size = DataReaderHelper.readUnsignedInt(in);
@@ -197,7 +228,10 @@ public class BAMAlignment extends SAMRecord implements SequenceRecord {
         final int pos = (int)DataReaderHelper.readUnsignedInt(in);
         alignment.setPositionStart(pos + 1);
         
-        long bin_mq_nl = DataReaderHelper.readUnsignedInt(in);
+        final int l_read_name = in.read() & 0xFF;
+        alignment.mapq = (byte)in.read();
+        alignment.bin = (short)DataReaderHelper.readUnsignedShort(in);
+        
         //long flag_nc = DataReader.readUnsignedInt(in);
         int n_cigar_op = DataReaderHelper.readUnsignedShort(in);
         final int flag = DataReaderHelper.readUnsignedShort(in);
@@ -205,12 +239,12 @@ public class BAMAlignment extends SAMRecord implements SequenceRecord {
         
         final int l_seq = (int)DataReaderHelper.readUnsignedInt(in);
         
-        final int next_refID = (int)DataReaderHelper.readUnsignedInt(in);
-        final int next_pos = (int)DataReaderHelper.readUnsignedInt(in);
+        alignment.next_refID = (int)DataReaderHelper.readUnsignedInt(in);
+        alignment.next_pos = (int)DataReaderHelper.readUnsignedInt(in);
         
-        int tlen = (int)DataReaderHelper.readUnsignedInt(in);
+        alignment.tlen = (int)DataReaderHelper.readUnsignedInt(in);
         
-        StringBuilder read_name = new StringBuilder();
+        StringBuilder read_name = new StringBuilder(l_read_name);
         int ch;
         while ((ch = in.read()) != 0) {
             read_name.append((char)ch);
@@ -220,7 +254,7 @@ public class BAMAlignment extends SAMRecord implements SequenceRecord {
         
         //int n_cigar_op = (int) (flag_nc & 0xFFFF);
         if (n_cigar_op > 0) {
-            long[] cigar = new long[n_cigar_op];
+            final long[] cigar = new long[n_cigar_op];
             for (int i = 0; i < n_cigar_op; i++) {
                 final long cigar_op = DataReaderHelper.readUnsignedInt(in);
                 cigar[i] = cigar_op;
@@ -229,13 +263,13 @@ public class BAMAlignment extends SAMRecord implements SequenceRecord {
         }
         
         if (l_seq > 0) {
-            byte[] seq = new byte[(l_seq + 1) / 2];
+            final byte[] seq = new byte[(l_seq + 1) / 2];
             for (int i = 0; i < seq.length; i++) {
                 seq[i] = (byte)in.read();
             }
             alignment.setSequence(seq, l_seq);
             
-            byte[] qual = new byte[l_seq];
+            final byte[] qual = new byte[l_seq];
             for (int i = 0; i < l_seq; i++) {
                 qual[i] = (byte)in.read();
             }

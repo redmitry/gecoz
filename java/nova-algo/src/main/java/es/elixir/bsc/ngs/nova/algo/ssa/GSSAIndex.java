@@ -1,3 +1,28 @@
+/**
+ * *****************************************************************************
+ * Copyright (C) 2015 Spanish National Bioinformatics Institute (INB) and
+ * Barcelona Supercomputing Center
+ *
+ * Modifications to the initial code base are copyright of their respective
+ * authors, or their employers as appropriate.
+ * 
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1301  USA
+ *****************************************************************************
+ */
+
 package es.elixir.bsc.ngs.nova.algo.ssa;
 
 import es.elixir.bsc.ngs.nova.algo.tree.HuffmanShapedWaveletTree;
@@ -14,7 +39,7 @@ import java.nio.ByteBuffer;
  * 
  * @author Dmitry Repchevsky
  */
-public class GSSAIndex {
+public class GSSAIndex implements SAIndex {
     private final RankedWTNode rank; // bit vector that keeps marked characters (those for which SA is kept)
     private final IndexWaveletTree wsa; // partial suffix array
 
@@ -124,6 +149,12 @@ public class GSSAIndex {
         wsa = new IndexWaveletTree(ssa, out);
     }
 
+    @Override
+    public int getSamplingFactor() {
+        return sampling_factor;
+    }
+    
+    @Override
     public long size() {
         return rank.size;
     }
@@ -136,6 +167,7 @@ public class GSSAIndex {
      * 
      * @return the Suffix Array index or Integer.MIN if no index stored at the position
      */
+    @Override
     public long get(long pos) {
         return rank.get(pos) == 0 ? Integer.MIN_VALUE : wsa.get(rank.count(pos) - 1) << sampling_factor;
     }
@@ -148,6 +180,7 @@ public class GSSAIndex {
      * 
      * @return the position for the index or Integer.MIN if no index stored
      */
+    @Override
     public long find(long idx) {
         final long sidx = idx >> sampling_factor;
         return idx == sidx << sampling_factor ? rank.findOne(wsa.find(sidx) + 1) : Integer.MIN_VALUE;

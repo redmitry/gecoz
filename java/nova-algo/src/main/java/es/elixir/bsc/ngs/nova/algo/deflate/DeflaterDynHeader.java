@@ -25,50 +25,40 @@
 
 package es.elixir.bsc.ngs.nova.algo.deflate;
 
-import es.elixir.bsc.ngs.nova.io.BitInputStream;
+import es.elixir.bsc.ngs.nova.io.BitOutputStream;
 import java.io.IOException;
-import java.util.Arrays;
 
 /**
- * Deflate Block Header class (RFC1951 3.2.3).
- * 
  * @author Dmitry Repchevsky
  */
 
-public class BlockHeader {
-
-    public final static int NO_COMPRESSION = 0x00;
-    public final static int HUFF_FIXED = 0x01;
-    public final static int HUFF_DYNAMIC = 0x02;
-
-    public final boolean bfinal;
-    public final int btype;
-    public int len;
+public class DeflaterDynHeader {
     
-    public BlockHeader(final int btype, final boolean bfinal) {
-        this.btype = btype;
-        this.bfinal = bfinal;
+    public final DeflateEncodeTable litLenTable;
+    public final DeflateEncodeTable distLenTable;
+    
+    public DeflaterDynHeader(DeflateEncodeTable litLenTable, DeflateEncodeTable distLenTable) {
+        this.litLenTable = litLenTable;
+        this.distLenTable = distLenTable;
     }
-
-    public BlockHeader(final BitInputStream in) throws IOException {
-        final int block_header = (int) ((in.readBits(3)) & 0b111);
+    
+    public final void write(final BitOutputStream out) throws IOException {
         
-        btype = block_header >>> 1;
-        bfinal = (block_header & 0x01) != 0;
-    }
+        int hlit = litLenTable.bit_lengths.length;
+        while (litLenTable.bit_lengths[--hlit] == 0 && hlit > 256) {}
+        out.writeBits(hlit - 256, 5); // 5 bits - the number of Literal/Length codes - 257 (257 - 286)
+        
+        int hdist = distLenTable.bit_lengths.length;
+        while (distLenTable.bit_lengths[--hdist] == 0 && hdist > 0) {}
+        out.writeBits(hdist, 5);  // 5 bits - the number of Distance codes - 1         (1 - 32)
+        
+        hlit++;
+        hdist++;
+        
+        final byte[] len = new byte[hlit + hdist];
+        System.arraycopy(litLenTable.bit_lengths, 0, len, 0, hlit);
+        System.arraycopy(distLenTable.bit_lengths, 0, len, hlit, hdist);
 
-    public static final byte[] getDefaultLitLen() {
-        final byte[] cl = new byte[288];
-        Arrays.fill(cl, 0, 144, (byte)8);
-        Arrays.fill(cl, 144, 256, (byte)9);
-        Arrays.fill(cl, 256, 280, (byte)7);
-        Arrays.fill(cl, 280, 288, (byte)8);
-        return cl;
-    }
-    
-    public static final byte[] getDefaultDist() {
-        final byte[] cl = new byte[32];
-        Arrays.fill(cl, 0, 32, (byte)5);
-        return cl;
+        new DeflateLengthsTable(len).write(out);
     }
 }

@@ -32,21 +32,47 @@ package es.elixir.bsc.ngs.nova.sam;
 public abstract class SAMRecord implements SequenceRecord {
     public final static int UNMAPPED_SEGMENT = 0x04;
     
-    private int refID;
-    private int pos;
-    private int flag;
-    private String qname;
-    private int end_pos;
+    protected int pos;
+    protected int flag;
+    protected byte mapq;
+    protected int tlen;
+    protected String qname;
+    protected String rname;
+    protected int end_pos;
     protected long[] cigar;
     
+    public byte getMappingQuality() {
+        return mapq;
+    }
+
+    public void setMappingQuality(final byte mapq) {
+        this.mapq = mapq;
+    }
+    
+    public int getTemplateLength() {
+        return tlen;
+    }
+    
+    public void setTemplateLength(final int tlen) {
+        this.tlen = tlen;
+    }
+
     @Override
     public String getQName() {
         return qname;
     }
     
     @Override
-    public void setQName(String qname) {
+    public void setQName(final String qname) {
         this.qname = qname;
+    }
+    
+    public String getRName() {
+        return rname;
+    }
+    
+    public void setRName(final String rname) {
+        this.rname = rname;
     }
 
     @Override
@@ -55,11 +81,11 @@ public abstract class SAMRecord implements SequenceRecord {
     }
     
     @Override
-    public void setCIGAR(String cigar) {
+    public void setCIGAR(final String cigar) {
         this.cigar = CIGAR.encode(cigar);
     }
 
-    protected void setCIGAR(long[] cigar) {
+    protected void setCIGAR(final long[] cigar) {
         this.cigar = cigar;
     }
 
@@ -69,7 +95,7 @@ public abstract class SAMRecord implements SequenceRecord {
     }
     
     @Override
-    public void setPositionStart(int pos) {
+    public void setPositionStart(final int pos) {
         this.pos = pos;
     }
     
@@ -87,7 +113,7 @@ public abstract class SAMRecord implements SequenceRecord {
         return end_pos;
     }
 
-    protected void setPositionEnd(int end_pos) {
+    protected void setPositionEnd(final int end_pos) {
         this.end_pos = end_pos;
     }
 
@@ -97,7 +123,7 @@ public abstract class SAMRecord implements SequenceRecord {
     }
     
     @Override
-    public void setFlag(int flag) {
+    public void setFlag(final int flag) {
         this.flag = flag;
     }
     

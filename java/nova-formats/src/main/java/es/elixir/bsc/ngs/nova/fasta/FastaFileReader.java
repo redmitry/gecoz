@@ -70,7 +70,7 @@ public class FastaFileReader implements Iterable<FastaSequence> {
     public FastaFileReader(Path path, boolean lazy) throws IOException {
         
         boolean gzip;
-        try (GZipFileInputStream in = new GZipFileInputStream(path.toFile())) {
+        try (GZipFileInputStream in = new GZipFileInputStream(path)) {
             gzip = true;
         } catch (ZipException ex) {
             gzip = false;
@@ -82,11 +82,15 @@ public class FastaFileReader implements Iterable<FastaSequence> {
     
     @Override
     public FastaIterator iterator() {
-        
+        return (iterator(null));
+    }
+    
+    public FastaIterator iterator(FastaSequence seq) {
         try {
-            InputStream in = gzip ? new GZipFileInputStream(path.toFile()) :
+            InputStream in = gzip ? new GZipFileInputStream(path) :
                     new BufferedInputStream(Files.newInputStream(path, StandardOpenOption.READ));
-            return new FastaIterator(in, gzip ? false : lazy);
+            return seq == null ? new FastaIterator(in, gzip ? false : lazy) : 
+                                 new FastaIterator(in, seq, gzip ? false : lazy);
         } catch (IOException ex) {
             return null;
         }
@@ -113,7 +117,7 @@ public class FastaFileReader implements Iterable<FastaSequence> {
         
         InputStream in;
         if (gzip) {
-            in = new GZipFileInputStream(path.toFile());
+            in = new GZipFileInputStream(path);
             in.skip(seq.position);            
         } else {
             FileChannel channel = FileChannel.open(path, EnumSet.of(READ));

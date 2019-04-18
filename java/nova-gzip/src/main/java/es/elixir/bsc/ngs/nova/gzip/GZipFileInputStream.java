@@ -29,36 +29,45 @@ import es.elixir.bsc.ngs.nova.algo.deflate.Inflater;
 import es.elixir.bsc.ngs.nova.io.DataReaderHelper;
 import es.elixir.bsc.ngs.nova.io.FileChannelBitInputStream;
 import java.io.EOFException;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.FileChannel;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 
 /**
  * @author Dmitry Repchevsky
  */
 
-public class GZipFileInputStream extends InputStream {
+public class GZipFileInputStream extends InputStream 
+        implements AutoCloseable {
     
     private GZipHeader header;
 
     private final Inflater inflater;
+    private final FileChannel channel;
     private final FileChannelBitInputStream in;
     private final java.util.zip.CRC32 crc;
 
     private long block_pos;
     
-    public GZipFileInputStream(File file) throws IOException {
-        final FileChannel channel = new FileInputStream(file).getChannel();
+    public GZipFileInputStream(final Path file) throws IOException {
+        channel = FileChannel.open(file, StandardOpenOption.READ);
         in = new FileChannelBitInputStream(channel);
         inflater = new Inflater(in, crc = new java.util.zip.CRC32());
         readHeader();
     }
 
+    @Override
+    public void close() throws IOException {
+        in.align();
+        channel.close();
+    }
+
     public long getBlockPosition() {
         return block_pos;
     }
+
     /**
      * @return the number of uncompressed bytes read from the current gzip chunk.
      * @throws java.io.IOException
@@ -91,7 +100,7 @@ public class GZipFileInputStream extends InputStream {
      * @param pos the position to move
      * @throws IOException 
      */
-    protected void move(long pos) throws IOException {
+    protected void move(final long pos) throws IOException {
         block_pos = pos;
         in.setPosition(pos);
         inflater.reset();
@@ -106,7 +115,7 @@ public class GZipFileInputStream extends InputStream {
      * @throws java.io.IOException
      */
     public boolean next() throws IOException {
-        while (inflater.skip(65536) >= 0);
+        while (inflater.skip(65536) >= 0) {}
         return readFooter() >= 0;
     }
     
@@ -145,12 +154,12 @@ public class GZipFileInputStream extends InputStream {
     }
     
     @Override
-    public int read(byte[] buf) throws IOException {
+    public int read(final byte[] buf) throws IOException {
         return read(buf, 0, buf.length);
     }
     
     @Override
-    public int read(byte[] buf, int off, int len) throws IOException {
+    public int read(final byte[] buf, final int off, final int len) throws IOException {
         final int l = inflater.read(buf, off, len);
         if (l < 0 && readFooter() == 0) {
             return read(buf, off, len);
@@ -159,7 +168,7 @@ public class GZipFileInputStream extends InputStream {
     }
     
     private int readFooter() throws IOException {
-        long c = DataReaderHelper.readUnsignedInt(in);
+        final long c = DataReaderHelper.readUnsignedInt(in);
         if (c != crc.getValue()) {
             throw new IOException("invalid block crc code");
         }

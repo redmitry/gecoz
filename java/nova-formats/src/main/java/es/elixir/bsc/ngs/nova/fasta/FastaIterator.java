@@ -25,6 +25,17 @@ public class FastaIterator implements Iterator<FastaSequence>, AutoCloseable {
         out = lazy ? null : new ByteArrayOutputStream();
     }
     
+    protected FastaIterator(InputStream in, FastaSequence seq, boolean lazy) throws IOException {
+        ch = '\r';
+        position = seq.position;
+        header = seq.header;
+        out = lazy ? null : new ByteArrayOutputStream();
+        
+        this.in = in;
+        long toskip = position;
+        while ((toskip -= in.skip(toskip)) > 0); // put stream to the sequence position
+    }
+    
     @Override
     public boolean hasNext() {
         if (header != null) {

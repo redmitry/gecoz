@@ -1,6 +1,6 @@
 /**
  * *****************************************************************************
- * Copyright (C) 2015 Spanish National Bioinformatics Institute (INB) and
+ * Copyright (C) 2019 Spanish National Bioinformatics Institute (INB) and
  * Barcelona Supercomputing Center
  *
  * Modifications to the initial code base are copyright of their respective
@@ -25,6 +25,7 @@
 
 package es.elixir.bsc.ngs.nova.algo.deflate;
 
+import static es.elixir.bsc.ngs.nova.algo.deflate.Deflater.DEFLATE_WINDOW_SIZE;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.zip.Checksum;
@@ -32,8 +33,9 @@ import java.util.zip.Checksum;
 /**
  * @author Dmitry Repchevsky
  */
+
 class InflaterOutput {
-    
+
     private final static int MASK = 0x7FFF;
     
     private final Checksum hash;
@@ -41,9 +43,9 @@ class InflaterOutput {
     private int start, end;
     private int count;
     
-    InflaterOutput(Checksum hash) {
+    InflaterOutput(final Checksum hash) {
         this.hash = hash;
-        buffer = new byte[32768];
+        buffer = new byte[DEFLATE_WINDOW_SIZE];
     }
     
     public void reset() {
@@ -69,12 +71,23 @@ class InflaterOutput {
         return (end - start) & MASK;
     }
 
-    public void push(int i) {
+    public void push(final int i) {
         buffer[end++] = (byte)i;
         end &= MASK;
     }
     
-    public void inflate(int dist, int len) {
+    /**
+     * Get the byte located at the distance from the current position.
+     * 
+     * @param dist the distance from current buffer position (0 - 32768).
+     * 
+     * @return the byte located 'dist' position back.
+     */
+    public int peek(final int dist) {
+        return buffer[(end - dist) & MASK] & 0xFF;
+    }
+    
+    public void inflate(final int dist, final int len) {
         if (dist < len) {
             overlap(dist, len);
         } else if (dist <= end) {
@@ -109,8 +122,8 @@ class InflaterOutput {
         }
     }
     
-    private void overlap(int dist, int len) {
-        int pos = (end - dist) & MASK;
+    private void overlap(final int dist, final int len) {
+        final int pos = (end - dist) & MASK;
         
         if (dist == 1) {
             // repeat the last symbol 'len' times
@@ -127,21 +140,6 @@ class InflaterOutput {
         } else {
             slow(pos, len);
         }
-    }
-    
-    public int read() {
-        if (end == start) {
-            return -1;
-        }
-        
-        final int b = buffer[start] & 0xFF;
-        if (hash != null) {
-            hash.update(b);
-        }
-        count++;
-        start++;
-        start &= MASK;
-        return b;
     }
 
     public final long skip(long nbytes) throws IOException {
@@ -161,6 +159,21 @@ class InflaterOutput {
         start &= MASK;
         
         return nbytes;
+    }
+
+    public int read() {
+        if (end == start) {
+            return -1;
+        }
+        
+        final int b = buffer[start] & 0xFF;
+        if (hash != null) {
+            hash.update(b);
+        }
+        count++;
+        start++;
+        start &= MASK;
+        return b;
     }
     
     public int read(byte[] buf) {

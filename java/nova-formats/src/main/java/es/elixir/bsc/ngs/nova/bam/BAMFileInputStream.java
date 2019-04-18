@@ -25,10 +25,10 @@
 
 package es.elixir.bsc.ngs.nova.bam;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.zip.DataFormatException;
 import es.elixir.bsc.ngs.nova.gzip.GZipFileInputStream;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.zip.DataFormatException;
 
 /**
  * @author Dmitry Repchevsky
@@ -38,11 +38,11 @@ public class BAMFileInputStream extends GZipFileInputStream {
 
     private final BAMHeader header;
     
-    public BAMFileInputStream(File fbam) throws IOException, DataFormatException {
+    public BAMFileInputStream(final Path fbam) throws IOException, DataFormatException {
         this(fbam, null);
     }
     
-    public BAMFileInputStream(File fbam, File fbai) throws IOException, DataFormatException {
+    public BAMFileInputStream(final Path fbam, final Path fbai) throws IOException, DataFormatException {
         super(fbam);
         header = new BAMHeader(this);
     }
@@ -73,6 +73,6 @@ public class BAMFileInputStream extends GZipFileInputStream {
     public void move(long index) throws IOException {
         super.move(index >>> 16);
         index &= 0xFFFF;
-        for (long i = index, j = 0; i > 0 && (j = skip(i)) >= 0; i -= j);
+        for (long i = index, j = 0; i > 0 && (j = skip(i)) >= 0; i -= j) {}
     }
 }

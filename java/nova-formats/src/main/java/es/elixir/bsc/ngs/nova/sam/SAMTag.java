@@ -26,7 +26,7 @@
 package es.elixir.bsc.ngs.nova.sam;
 
 import java.nio.ByteBuffer;
-import javax.xml.bind.DatatypeConverter;
+import java.util.Arrays;
 
 /**
  * @author Dmitry Repchevsky
@@ -57,23 +57,27 @@ public enum SAMTag {
             case 'I' : return buf.getInt() & 0xFFFFFFFFL;
             case 'f' : return buf.getFloat();
             case 'Z' : byte ch0;
-                       StringBuilder sb1 = new StringBuilder();
+                       final StringBuilder sb1 = new StringBuilder();
                        while ((ch0 = buf.get()) != 0) {
                            sb1.append((char)ch0);
                        }
                        return sb1.toString();
-            case 'H' : byte ch1;
-                       StringBuilder sb2 = new StringBuilder();
-                       while ((ch1 = buf.get()) != 0) {
-                           sb2.append((char)ch1);
+            case 'H' : int sz = 0;
+                       byte[] out = new byte[16];
+                       for (int i = 0, ch1; (ch1 = buf.get()) != 0; i++, sz = i >>> 1) {
+                           if (sz >= out.length) {
+                               out = Arrays.copyOf(out, out.length << 1);
+                           }
+                           out[sz] = (byte)(out[sz] << 4 | ch1 - (ch1 < 'A' ? '0' : 'A')); 
                        }
-                       return DatatypeConverter.parseHexBinary(sb2.toString());
+                       return Arrays.copyOf(out, sz);
             case 'B' : final byte a_type = buf.get();
                        final int len = buf.getInt();
-                       String[] val = new String[len];
+                       final String[] val = new String[len];
                        for (int i = 0; i < len; i++) {
                            val[i] = decode(buf, a_type);
                        }
+                       return val;
         }
         
         return null;

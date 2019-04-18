@@ -25,11 +25,11 @@
 
 package es.elixir.bsc.ngs.nova.bam;
 
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.DataFormatException;
@@ -45,16 +45,16 @@ public class BAMFileReader {
     private BAI bai;
     private BAMFileInputStream stream;
     
-    public BAMFileReader(File fbam) throws IOException, DataFormatException {
+    public BAMFileReader(final Path fbam) throws IOException, DataFormatException {
         this(fbam, null);
     }
 
-    public BAMFileReader(File fbam, File fbai) throws IOException, DataFormatException {
+    public BAMFileReader(final Path fbam, final Path fbai) throws IOException, DataFormatException {
         
         if (fbai != null) {
-            if (fbai.exists()) {
-                try (FileInputStream in = new FileInputStream(fbai)) {
-                    bai = new BAI(new BufferedInputStream(in));
+            if (Files.exists(fbai) && Files.isRegularFile(fbai)) {
+                try (InputStream in = Files.newInputStream(fbai)) {
+                    bai = new BAI(in);
                 }
             } else {
                 saveIndex(fbam, fbai);
@@ -66,22 +66,25 @@ public class BAMFileReader {
         stream = new BAMFileInputStream(fbam);
     }
     
-    public List<BAMAlignment> search(int idRef, int start, int end) throws IOException, DataFormatException {
-        List<BAMAlignment> alignments = new ArrayList();
+    public List<BAMAlignment> search(final int idRef, 
+                                     final int start, 
+                                     final int end) throws IOException, DataFormatException {
+
+        final List<BAMAlignment> alignments = new ArrayList();
         
-        Bin[] bins = bai.indexes[idRef];
+        final Bin[] bins = bai.indexes[idRef];
         if (bins != null) {
-            int[] nbins = BAI.reg2bins(start, end);
-            for (int nbin : nbins) {
-                final Bin bin = bins[nbin];
+            final int[] nbins = BAI.reg2bins(start, end);
+            for (int i = 0; i < nbins.length; i++) {
+                final Bin bin = bins[nbins[i]];
                 final int n_chunk = bin.chunk_beg.length;
-                for (int i = 0; i < n_chunk; i++) {
-                    final long chunk_beg = bin.chunk_beg[i];
-                    final long chunk_end = bin.chunk_end[i];
+                for (int j = 0; j < n_chunk; j++) {
+                    final long chunk_beg = bin.chunk_beg[j];
+                    final long chunk_end = bin.chunk_end[j];
 
                     stream.move(chunk_beg);
                     while (stream.available() >= 0 && stream.index() < chunk_end) {
-                        BAMAlignment a = BAMAlignment.decode(stream);
+                        final BAMAlignment a = BAMAlignment.decode(stream);
                         if (a.getPositionStart() < end && a.getPositionEnd() > start) {
                             alignments.add(a);
                         }
@@ -93,15 +96,15 @@ public class BAMFileReader {
         return alignments;
     }
     
-    private BAI saveIndex(File fbam, File fbai) throws IOException, DataFormatException {
+    private BAI saveIndex(final Path fbam, final Path fbai) throws IOException, DataFormatException {
         bai = makeIndex(fbam);
-        try (FileOutputStream out = new FileOutputStream(fbai)) {
+        try (OutputStream out = Files.newOutputStream(fbai)) {
             bai.save(out);
         }
         return bai;
     }
     
-    private BAI makeIndex(File fbam) throws IOException, DataFormatException {
+    private BAI makeIndex(final Path fbam) throws IOException, DataFormatException {
         try (BAMFileInputStream bam = new BAMFileInputStream(fbam)) {
             return new BAI(bam);
         }

@@ -42,7 +42,7 @@ import java.util.Arrays;
  * @author Dmitry Repchevsky
  */
 
-public class SuffixArray {
+public class SAIS {
     
     /* the cue-card
      * 
@@ -66,7 +66,7 @@ public class SuffixArray {
             byte[] s = Files.readAllBytes(input);
             int[] sa = new int[s.length];
             final long start = System.currentTimeMillis();
-            SuffixArray.suffix(ByteBuffer.wrap(s), sa);
+            SAIS.suffix(ByteBuffer.wrap(s), sa);
             final long end = System.currentTimeMillis();
             System.out.println("finished " + s.length + " in " + (end - start) + " ms.");
             

@@ -25,10 +25,10 @@
 
 package es.elixir.bsc.ngs.nova.bam;
 
+import es.elixir.bsc.ngs.nova.io.DataReaderHelper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.zip.DataFormatException;
-import es.elixir.bsc.ngs.nova.io.DataReaderHelper;
 
 /**
  * @author Dmitry Repchevsky

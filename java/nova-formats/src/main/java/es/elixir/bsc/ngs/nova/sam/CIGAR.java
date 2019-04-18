@@ -35,7 +35,7 @@ import java.util.regex.Pattern;
 
 public class CIGAR {
     private final static String CIGAR = "MIDNSHP=X";
-    private final static Pattern pattern = Pattern.compile("([0-9]+)([MIDNSHP=X]{1})");
+    private final static Pattern PATTERN = Pattern.compile("([0-9]+)([MIDNSHP=X]{1})");
 
     private int length;
     private long[] cigar;
@@ -44,7 +44,7 @@ public class CIGAR {
         this.cigar = encode(cigar);
     }
     
-    protected CIGAR(long[] cigar) {
+    protected CIGAR(final long[] cigar) {
         this.cigar = cigar;
     }
 
@@ -66,8 +66,8 @@ public class CIGAR {
      * @param cigar CIGAR string
      * @return CIGAR in BAM binary format
      */
-    public static long[] encode(String cigar) {
-        Matcher m = pattern.matcher(cigar);
+    public static long[] encode(final String cigar) {
+        final Matcher m = PATTERN.matcher(cigar);
 
         long[] arr = null;
         while (m.find()) {
@@ -85,8 +85,8 @@ public class CIGAR {
         return arr;
     }
     
-    public static String parse(long[] cigar) {
-        StringBuilder cigar_str = new StringBuilder();
+    public static String parse(final long[] cigar) {
+        final StringBuilder cigar_str = new StringBuilder();
         for (int i = 0, n = cigar.length; i < n; i++) {
             final long cigar_op = cigar[i];
             final int op = (int)(cigar_op & 0x0F);
@@ -97,7 +97,7 @@ public class CIGAR {
         return cigar_str.toString();
     }
     
-    public static int getLength(long[] cigar) {
+    public static int getLength(final long[] cigar) {
         int length = 0;
         for (int i = 0, n = cigar.length; i < n; i++) {
             final long cigar_op = cigar[i];

@@ -9,7 +9,7 @@
     <parent>
         <groupId>es.elixir.bsc.ngs</groupId>
         <artifactId>nova</artifactId>
-        <version>0.2-SNAPSHOT</version>
+        <version>0.2.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>nova-gecoz</artifactId>
@@ -32,13 +32,13 @@
         <dependency>
             <groupId>es.elixir.bsc.ngs</groupId>
             <artifactId>nova-algo</artifactId>
-            <version>0.2-SNAPSHOT</version>
+            <version>0.2.1-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>es.elixir.bsc.ngs</groupId>
             <artifactId>nova-formats</artifactId>
-            <version>0.2-SNAPSHOT</version>
+            <version>0.2.1-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
         <dependency>

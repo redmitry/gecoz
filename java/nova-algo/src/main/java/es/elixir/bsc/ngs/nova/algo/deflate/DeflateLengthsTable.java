@@ -1,3 +1,28 @@
+/**
+ * *****************************************************************************
+ * Copyright (C) 2019 Spanish National Bioinformatics Institute (INB) and
+ * Barcelona Supercomputing Center
+ *
+ * Modifications to the initial code base are copyright of their respective
+ * authors, or their employers as appropriate.
+ * 
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1301  USA
+ *****************************************************************************
+ */
+
 package es.elixir.bsc.ngs.nova.algo.deflate;
 
 import es.elixir.bsc.ngs.nova.io.BitInputStream;
@@ -15,7 +40,11 @@ public class DeflateLengthsTable {
 
     public final byte[] d_tree;
     
-    public DeflateLengthsTable(BitInputStream in, int len) throws IOException {
+    public DeflateLengthsTable(byte[] d_tree) {
+        this.d_tree = d_tree;
+    }
+
+    public DeflateLengthsTable(final BitInputStream in, int len) throws IOException {
         this.d_tree = new byte[len];
         
         final int hclen = (int) ((in.readBits(4) & 0b1111) + 4); // 4 bits - the number of Code Length codes - 4     (4 - 19)
@@ -49,10 +78,6 @@ public class DeflateLengthsTable {
             }
         }
     }
-            
-    public DeflateLengthsTable(byte[] d_tree) {
-        this.d_tree = d_tree;
-    }
     
     public final void write(final BitOutputStream out) throws IOException {
         
@@ -61,7 +86,7 @@ public class DeflateLengthsTable {
         
         out.writeBits(hclen - 3, 4);
 
-        DeflateEncodeTable table = new DeflateEncodeTable(counts);
+        DeflateEncodeTable table = new DeflateEncodeTable(counts, (byte)7);
         
         for (int i = 0; i <= hclen; i++) {
             out.writeBits(table.bit_lengths[CL_ORDER[i]], 3);
@@ -180,5 +205,4 @@ public class DeflateLengthsTable {
         
         return hclen;
     }
-
 }

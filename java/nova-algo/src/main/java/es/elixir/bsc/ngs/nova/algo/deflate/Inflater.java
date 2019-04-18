@@ -36,36 +36,36 @@ import java.util.zip.Checksum;
 public class Inflater {
 
     // length codes (RFC 1951 3.2.5)
-    private static final int BLC_LENS[] =  { 
+    protected static final int BLC_LENS[] =  { 
         3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31,
         35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258
     };
   
     // extra bits for the lengths
-    private static final int BLC_LENS_EXT_BITS[] = { 
+    protected static final int BLC_LENS_EXT_BITS[] = { 
         0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 
         2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0
     };
   
     // block distances ( 0 - 29 )
-    private static final int BLC_DIST[] = {
+    protected static final int BLC_DIST[] = {
         1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193,
         257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145,
         8193, 12289, 16385, 24577
     };
   
     // extra bits for distances offsets
-    private static final int BLC_DIST_EXT_BITS[] = {
+    protected static final int BLC_DIST_EXT_BITS[] = {
         0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6,
         7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13
     };
   
     private final BitInputStream in;
     private final InflaterOutput out;
-    private BlockHeader header;
+    private InflaterBlockHeader header;
     private boolean end_of_stream;
     
-    public Inflater(BitInputStream in, Checksum hash) throws IOException {
+    public Inflater(final BitInputStream in, final Checksum hash) throws IOException {
         this.in = in;
         out = new InflaterOutput(hash);
     }
@@ -92,7 +92,7 @@ public class Inflater {
         }
         
         if (header == null) {
-            header = new BlockHeader(in);
+            header = new InflaterBlockHeader(in);
         }
             
         return inflate(0, 1) == 0;
@@ -115,7 +115,7 @@ public class Inflater {
                 return 0;
             } else {
                 if (header == null) {
-                    header = new BlockHeader(in);
+                    header = new InflaterBlockHeader(in);
                 }
 
                 if (header.btype == BlockHeader.NO_COMPRESSION) {
@@ -150,7 +150,7 @@ public class Inflater {
             }
 
             if (header == null) {
-                header = new BlockHeader(in);
+                header = new InflaterBlockHeader(in);
             }
             
             if (header.btype == BlockHeader.NO_COMPRESSION) {
@@ -185,7 +185,7 @@ public class Inflater {
             }
 
             if (header == null) {
-                header = new BlockHeader(in);
+                header = new InflaterBlockHeader(in);
             }
         
             if (header.btype == BlockHeader.NO_COMPRESSION) {
@@ -210,8 +210,6 @@ public class Inflater {
                         header = null;
                     }
                 }
-                
-                //return in.read(buf, off, len);
                 
                 in.align();
                 for (int i = 0; i < len; i++) {

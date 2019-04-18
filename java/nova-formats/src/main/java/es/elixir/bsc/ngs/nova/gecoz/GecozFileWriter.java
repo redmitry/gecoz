@@ -29,7 +29,7 @@ import es.elixir.bsc.ngs.nova.algo.ssa.GSSAIndex;
 import es.elixir.bsc.ngs.nova.algo.string.SuffixArray;
 import es.elixir.bsc.ngs.nova.algo.tree.HSWTShape;
 import es.elixir.bsc.ngs.nova.algo.tree.HuffmanShapedWaveletTree;
-
+import es.elixir.bsc.ngs.nova.algo.tree.HuffmanShapedWaveletTree.DataSource;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -42,7 +42,6 @@ import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import java.util.EnumSet;
-import es.elixir.bsc.ngs.nova.algo.tree.HuffmanShapedWaveletTree.DataSource;
 import java.io.Closeable;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;

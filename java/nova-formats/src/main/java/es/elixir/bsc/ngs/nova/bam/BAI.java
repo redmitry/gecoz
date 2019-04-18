@@ -25,6 +25,7 @@
 
 package es.elixir.bsc.ngs.nova.bam;
 
+import es.elixir.bsc.ngs.nova.io.DataReaderHelper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -39,7 +40,6 @@ import java.util.List;
 import java.util.TreeMap;
 
 import java.util.zip.DataFormatException;
-import es.elixir.bsc.ngs.nova.io.DataReaderHelper;
 
 /**
  * @author Dmitry Repchevsky
@@ -117,11 +117,11 @@ public class BAI {
             BAMAlignment a = BAMAlignment.decode(in);
             final long chunk_end = in.index();
             
-            if (a.refID >= nRef) {
+            if (a.getRefID() >= nRef) {
                 continue;
             }
             
-            final int ref = a.refID;
+            final int ref = a.getRefID();
             
             final int beg = a.getPositionStart();
             final int end = a.getPositionEnd();

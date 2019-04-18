@@ -25,50 +25,47 @@
 
 package es.elixir.bsc.ngs.nova.algo.deflate;
 
-import es.elixir.bsc.ngs.nova.io.BitInputStream;
+import es.elixir.bsc.ngs.nova.io.BitOutputStream;
 import java.io.IOException;
-import java.util.Arrays;
 
 /**
- * Deflate Block Header class (RFC1951 3.2.3).
+ * Deflater Block Header class used for the compression.
  * 
  * @author Dmitry Repchevsky
  */
 
-public class BlockHeader {
+public class DeflaterBlockHeader extends BlockHeader {
 
-    public final static int NO_COMPRESSION = 0x00;
-    public final static int HUFF_FIXED = 0x01;
-    public final static int HUFF_DYNAMIC = 0x02;
-
-    public final boolean bfinal;
-    public final int btype;
-    public int len;
+    public final DeflaterDynHeader header;
     
-    public BlockHeader(final int btype, final boolean bfinal) {
-        this.btype = btype;
-        this.bfinal = bfinal;
+    public DeflaterBlockHeader(final boolean bfinal) {
+        super(HUFF_FIXED, bfinal);
+        this.header = null;
     }
 
-    public BlockHeader(final BitInputStream in) throws IOException {
-        final int block_header = (int) ((in.readBits(3)) & 0b111);
+    public DeflaterBlockHeader(final int len, final boolean bfinal) {
+        super(NO_COMPRESSION, bfinal);
+        this.len = len;
+        this.header = null;
+    }
+    
+    public DeflaterBlockHeader(final DeflaterDynHeader header,
+                               final boolean bfinal) {
         
-        btype = block_header >>> 1;
-        bfinal = (block_header & 0x01) != 0;
+        super(HUFF_DYNAMIC, bfinal);
+        this.header = header;
     }
 
-    public static final byte[] getDefaultLitLen() {
-        final byte[] cl = new byte[288];
-        Arrays.fill(cl, 0, 144, (byte)8);
-        Arrays.fill(cl, 144, 256, (byte)9);
-        Arrays.fill(cl, 256, 280, (byte)7);
-        Arrays.fill(cl, 280, 288, (byte)8);
-        return cl;
-    }
-    
-    public static final byte[] getDefaultDist() {
-        final byte[] cl = new byte[32];
-        Arrays.fill(cl, 0, 32, (byte)5);
-        return cl;
+    public final void write(final BitOutputStream out) throws IOException {
+        out.writeBits((btype << 1) | (bfinal ? 1 : 0), 3);
+        switch(btype) {
+            case NO_COMPRESSION: out.writeBits(0, 5); // align
+                                 out.writeBits(len & 0xFFFF, 16);
+                                 out.writeBits(len ^ 0xFFFF, 16);
+            case HUFF_FIXED:     break;
+            case HUFF_DYNAMIC:   header.write(out);
+                                 break;
+            default: throw new IOException("invalid btype");
+        }
     }
 }

@@ -1,6 +1,6 @@
 /**
  * *****************************************************************************
- * Copyright (C) 2015 Spanish National Bioinformatics Institute (INB) and
+ * Copyright (C) 2019 Spanish National Bioinformatics Institute (INB) and
  * Barcelona Supercomputing Center
  *
  * Modifications to the initial code base are copyright of their respective
@@ -23,14 +23,17 @@
  *****************************************************************************
  */
 
-package es.elixir.bsc.ngs.nova.sam;
+package es.elixir.bsc.ngs.nova.algo.deflate;
 
-import java.util.regex.Pattern;
+import java.io.IOException;
 
 /**
  * @author Dmitry Repchevsky
  */
 
-public class MD {
-    public final static Pattern PATTERN = Pattern.compile("([0-9]+)([A-Z]|\\^[A-Z]+)");
+public interface LZOutputStream {
+
+    void encode_dist(int value) throws IOException;
+    void encode_lens(int value) throws IOException;
+    void encode_lit(int value) throws IOException;
 }
