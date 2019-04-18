@@ -33,4 +33,5 @@ import java.io.IOException;
 
 public interface BitOutputStream {
     void writeBits(long bits, int nbits) throws IOException;
+    void align() throws IOException;
 }
