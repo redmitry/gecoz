@@ -3,9 +3,11 @@
   <groupId>es.elixir.bsc.ngs</groupId>
   <artifactId>nova-algo</artifactId>
   <versioning>
+    <latest>0.2.1-SNAPSHOT</latest>
     <versions>
       <version>0.2-SNAPSHOT</version>
+      <version>0.2.1-SNAPSHOT</version>
     </versions>
-    <lastUpdated>20171201180654</lastUpdated>
+    <lastUpdated>20190418180654</lastUpdated>
   </versioning>
 </metadata>
