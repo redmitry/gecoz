@@ -25,6 +25,7 @@
 
 package es.elixir.bsc.ngs.nova.io;
 
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -32,67 +33,52 @@ import java.io.OutputStream;
  * @author Dmitry Repchevsky
  */
 
-public class DefaultBitOutputStream extends OutputStream implements BitOutputStream {
+public class DefaultBitOutputStream extends FilterOutputStream implements BitOutputStream {
     
     private long value;
-    private int bits_left;
+    private byte bits_pushed;
 
-    private final OutputStream out;
-    
-    public DefaultBitOutputStream(OutputStream out) {
-        bits_left = 64;
-        this.out = out;
+    public DefaultBitOutputStream(final OutputStream out) {
+        super(out);
     }
-    
-    @Override
-    public void writeBits(long bits, int nbits) throws IOException {
-        if (bits_left > nbits) {
-            bits_left -= nbits;
-            value = (value << nbits) | bits;
-        } else {
-            if (bits_left == nbits) {
-                bits = bits | (value << nbits);
-                bits_left = 64;
-                value = 0;
-            } else {
-                final int tail = nbits - bits_left;
-                long tmp = (value << bits_left) | (bits >> tail);
-                bits_left = 64 - tail;
-                value = bits & (0xFFFFFFFFFFFFFFFFL >>> bits_left);
-                bits = tmp;
-            }
 
-            for (int i = 56; i >= 0; i -= 8) {
-                out.write((byte)(bits >>> i & 0xFF));
-            }
+    @Override
+    public void writeBits(final long bits, final int nbits) throws IOException {
+        value |= bits << bits_pushed;
+        bits_pushed += nbits;
+        if (bits_pushed >= 64) {
+            put(value);
+            bits_pushed -= 64;
+            value = bits >>> (nbits - bits_pushed);
         }
     }
 
-    /**
-     * Writes the byte to the stream after aligning it
-     * 
-     * @param b
-     * @throws IOException 
-     */
     @Override
-    public void write(int b) throws IOException {
-        flush();
-        out.write((byte)(b & 0xFF));
+    public void align() throws IOException {
+        if (bits_pushed > 0) {
+            for (int i = 0; i < bits_pushed; i += 8) {
+                write((int)((value >>> i) & 0xFF));
+            }
+
+            bits_pushed = 0;
+            value = 0;
+        }        
+    }
+
+    @Override
+    public void flush() throws IOException {
+        align();
+        out.flush();
     }
     
     @Override
     public void close() throws IOException {
         flush();
-        out.close();
     }
-    
-    @Override
-    public void flush() throws IOException {
-        value <<= bits_left;
-        for (int i = 56, n = bits_left & 0b1111000; i >= n ; i -= 8) {
-            out.write((byte)(value >> i & 0xFF));
+
+    private void put(final long value) throws IOException {
+        for (int i = 0; i < 64; i += 8) {
+            write((int)((value >>> i) & 0xFF));
         }
-        value = 0;
-        bits_left = 64;
     }
 }
