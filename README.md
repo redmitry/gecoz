@@ -47,7 +47,7 @@ Gecotools doesn't use more threads than system actually has.
 ___
 GECOZ has several maven submodules that someone may found useful:
 - nova-io - basic input/output classes such as BitInputStream and BitOutputStream
-- nova-gzip - pure java GZipFileInputStream implementation with BGZF support.
+- nova-gzip - pure and fast java GZIP implementation with BGZF support.
 - nova-formats - simple BAM file reader. FASTA reader/writer
 - nova-algo - FM-Index implementation: Suffix Array, Huffman, Deflate, Huffman Shaped Wavelet Tree.
 
