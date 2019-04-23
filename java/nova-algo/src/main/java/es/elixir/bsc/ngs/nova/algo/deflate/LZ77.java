@@ -64,13 +64,17 @@ public class LZ77 {
         final int[] sa = new int[buf.limit()];
         final int[] c = SAIS.suffix(buf, sa);
         
-        final int[] lcp = lcp(buf, sa);
-        final int[] psi = new int[sa.length];
+        final long[] count = new long[256];
+        for (int i = 0, idx = -1; i < c.length; i++) {
+            if (c[i] > 0) {
+                count[i] = c[i] - idx;
+                idx = c[i];
+            }
+        }
         
-        final int n = lcp.length - 1;
-        
-        final long[] count = new long[256];        
-        int pos = psi(buf, c, count, sa, psi, buf.position());
+        final int[] inv = new int[sa.length];
+        final int[] lcp = lcp(buf, sa, inv);
+
         final DeflateEncodeTable table = new DeflateEncodeTable(count);
 
         final int est[] = new int[buf.limit() - buf.position() + 1];
@@ -78,98 +82,74 @@ public class LZ77 {
             est[i + 1] = est[i] + table.bit_lengths[buf.get(i + j) & 0xFF];
         }
 
-        while (true) {
-            int l = lcp[pos];
-            if (l < MIN_PATTERN_LENGTH && (pos < n && lcp[pos + 1] < MIN_PATTERN_LENGTH)) {
+        int pos = buf.position();
+        do {
+            if (lcp[inv[pos]] < MIN_PATTERN_LENGTH && (inv[pos] < lcp.length - 1 && lcp[inv[pos] + 1] < MIN_PATTERN_LENGTH)) {
                 out.encode_lit(buf.get(sa[pos]) & 0xFF);
             } else {
                 int gain = 0;
                 int length = 1;
                 int distance = DEFLATE_WINDOW_SIZE; // limit max distance
-                for (int p = pos - 1, len = l; len >= MIN_PATTERN_LENGTH; len = Math.min(len, lcp[p--])) {
-                    final int dist = sa[pos] - sa[p];
-                    if (dist > 0 && dist < distance) {
-                        final int len_idx = sa[pos] - buf.position();
-                        final int pattern_bits = est[len_idx + len] - est[len_idx];
-                        final int lens_bits = len >= 258 ? 0 : 32 - Integer.numberOfLeadingZeros(len - MIN_PATTERN_LENGTH >>> 3);
+                
+                for (int p = inv[pos] + 1, l = Integer.MAX_VALUE; p < lcp.length && (l = Math.min(l, lcp[p])) >= MIN_PATTERN_LENGTH; p++) {
+                    final int d = pos - sa[p];
+                    if (d > 0 && d < distance) {
+                        final int len_idx = pos - buf.position();
+                        final int pattern_bits = est[len_idx + l] - est[len_idx];
+                        final int lens_bits = l >= 258 ? 0 : 32 - Integer.numberOfLeadingZeros(l - MIN_PATTERN_LENGTH >>> 3);
                         int total_bits = pattern_bits - lens_bits;
                         if (total_bits < gain) {
                             break;
                         }
 
-                        final int dist_bits = 30 - Integer.numberOfLeadingZeros((dist - 1) | 3);
-                        
+                        final int dist_bits = 30 - Integer.numberOfLeadingZeros((d - 1) | 3);
+
                         total_bits -= dist_bits + 8;
                         if (total_bits > gain) {
                             gain = total_bits;
-                            distance = dist;
-                            length = len;
+                            distance = d;
+                            length = l;
                         }
                     }
                 }
 
-                for (int p = pos, len = Integer.MAX_VALUE; p < n && (len = Math.min(len, lcp[++p])) >= MIN_PATTERN_LENGTH;) {
-                    final int dist = sa[pos] - sa[p];
-                    if (dist > 0 && dist < DEFLATE_WINDOW_SIZE && (len > length || dist < distance)) {
-                        final int len_idx = sa[pos] - buf.position();
-                        final int pattern_bits = est[len_idx + len] - est[len_idx];
-                        final int lens_bits = len >= 258 ? 0 : 32 - Integer.numberOfLeadingZeros(len - MIN_PATTERN_LENGTH >>> 3);
+                for (int p = inv[pos] - 1, l = lcp[inv[pos]]; l >= MIN_PATTERN_LENGTH; l = Math.min(l, lcp[p]), p--) {
+                    final int d = pos - sa[p];
+                    if (d > 0 && d < DEFLATE_WINDOW_SIZE || (l <= length && d < distance)) {
+                        final int len_idx = pos - buf.position();
+                        final int pattern_bits = est[len_idx + l] - est[len_idx];
+                        final int lens_bits = l >= 258 ? 0 : 32 - Integer.numberOfLeadingZeros(l - MIN_PATTERN_LENGTH >>> 3);
                         int total_bits = pattern_bits - lens_bits;
                         if (total_bits < gain) {
                             break;
                         }
 
-                        final int dist_bits = 30 - Integer.numberOfLeadingZeros((dist - 1) | 3);
-                        
+                        final int dist_bits = 30 - Integer.numberOfLeadingZeros((d - 1) | 3);
+
                         total_bits -= dist_bits + 8;
                         if (total_bits > gain) {
                             gain = total_bits;
-                            distance = dist;
-                            length = len;
+                            distance = d;
+                            length = l;
                         }
                     }
                 }
-
-//                /* simple pattern search with no heuristic */
-//                for (int p = pos - 1, len = l; len >= length ; len = Math.min(len, lcp[p--])) {
-//                    final int dist = sa[pos] - sa[p];
-//                    if (dist > 0 && dist < distance) {
-//                        distance = dist;
-//                        length = len;
-//                    }
-//                }
-//                for (int p = pos, len = Integer.MAX_VALUE; p < n && (len = Math.min(len, lcp[++p])) >= length;) {
-//                    final int dist = sa[pos] - sa[p];
-//                    if (dist > 0 && dist < DEFLATE_WINDOW_SIZE && (len > length || dist < distance)) {
-//                        distance = dist;
-//                        length = len;
-//                    }
-//                }
 
                 if (length < MIN_PATTERN_LENGTH) {
                     out.encode_lit(buf.get(sa[pos]) & 0xFF);
                 } else {
                     length = Math.min(MAX_PATTERN_LENGTH, distance > 2 && distance < length ? distance : length);
 
-                    out.encode_lens(length);
+                    out.encode_lens(length--);
                     out.encode_dist(distance);
 
-                    while(--length > 0 && sa[pos] != sa.length - 1) {
-                        pos = psi[pos];
-                    }
+                    pos += length;
                 }
             }
-            
-            if (sa[pos] == sa.length - 1) {
-                break;
-            }
-            pos = psi[pos];
-        }
+        } while (++pos < sa.length);
     }
     
-    private static int[] lcp(ByteBuffer buf, int[] sa) {
-        
-        int[] inv = new int[sa.length];
+    private static int[] lcp(final ByteBuffer buf, final int[] sa, final int[] inv) {
         
         for (int i = 0, n = inv.length; i < n; i++) {
             inv[sa[i]] = i;
@@ -196,24 +176,5 @@ public class LZ77 {
         }
 
         return lcp;
-    }
-
-    private static int psi(final ByteBuffer buf, 
-                           final int[] c, long[] count, int[] sa, int[] psi, int start) {
-       
-        int first_character_index = 0;
-        for (int i = psi.length - 1; i >= 0; i--) {
-            count[buf.get(i) & 0xFF]++;
-            final int pos = sa[i];
-            if (pos > 0) {
-                final int ch = buf.get(pos - 1) & 0xFF;
-                psi[c[ch]] = i;
-                c[ch] = c[ch] - 1;                
-            }
-            if (pos == start) {
-                first_character_index = i;
-            }
-        }
-        return first_character_index;
     }
 }
