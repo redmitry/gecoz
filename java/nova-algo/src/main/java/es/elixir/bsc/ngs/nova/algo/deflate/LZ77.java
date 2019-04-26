@@ -85,7 +85,7 @@ public class LZ77 {
         int pos = buf.position();
         do {
             if (lcp[inv[pos]] < MIN_PATTERN_LENGTH && (inv[pos] < lcp.length - 1 && lcp[inv[pos] + 1] < MIN_PATTERN_LENGTH)) {
-                out.encode_lit(buf.get(sa[pos]) & 0xFF);
+                out.encode_lit(buf.get(pos) & 0xFF);
             } else {
                 int gain = 0;
                 int length = 1;
@@ -95,8 +95,9 @@ public class LZ77 {
                     final int d = pos - sa[p];
                     if (d > 0 && d < distance) {
                         final int len_idx = pos - buf.position();
-                        final int pattern_bits = est[len_idx + l] - est[len_idx];
-                        final int lens_bits = l >= 258 ? 0 : 32 - Integer.numberOfLeadingZeros(l - MIN_PATTERN_LENGTH >>> 3);
+                        final int len = Math.min(MAX_PATTERN_LENGTH, d > 2 && d < l ? d : l);
+                        final int pattern_bits = est[len_idx + len] - est[len_idx];
+                        final int lens_bits = len >= 258 ? 0 : 32 - Integer.numberOfLeadingZeros(len - MIN_PATTERN_LENGTH >>> 3);
                         int total_bits = pattern_bits - lens_bits;
                         if (total_bits < gain) {
                             break;
@@ -108,17 +109,18 @@ public class LZ77 {
                         if (total_bits > gain) {
                             gain = total_bits;
                             distance = d;
-                            length = l;
+                            length = len;
                         }
                     }
                 }
 
                 for (int p = inv[pos] - 1, l = lcp[inv[pos]]; l >= MIN_PATTERN_LENGTH; l = Math.min(l, lcp[p]), p--) {
                     final int d = pos - sa[p];
-                    if (d > 0 && d < DEFLATE_WINDOW_SIZE || (l <= length && d < distance)) {
+                    if (d > 0 && (d < distance || (l > length && d < DEFLATE_WINDOW_SIZE))) {
                         final int len_idx = pos - buf.position();
-                        final int pattern_bits = est[len_idx + l] - est[len_idx];
-                        final int lens_bits = l >= 258 ? 0 : 32 - Integer.numberOfLeadingZeros(l - MIN_PATTERN_LENGTH >>> 3);
+                        final int len = Math.min(MAX_PATTERN_LENGTH, d > 2 && d < l ? d : l);
+                        final int pattern_bits = est[len_idx + len] - est[len_idx];
+                        final int lens_bits = len >= 258 ? 0 : 32 - Integer.numberOfLeadingZeros(len - MIN_PATTERN_LENGTH >>> 3);
                         int total_bits = pattern_bits - lens_bits;
                         if (total_bits < gain) {
                             break;
@@ -130,16 +132,14 @@ public class LZ77 {
                         if (total_bits > gain) {
                             gain = total_bits;
                             distance = d;
-                            length = l;
+                            length = len;
                         }
                     }
                 }
 
                 if (length < MIN_PATTERN_LENGTH) {
-                    out.encode_lit(buf.get(sa[pos]) & 0xFF);
+                    out.encode_lit(buf.get(pos) & 0xFF);
                 } else {
-                    length = Math.min(MAX_PATTERN_LENGTH, distance > 2 && distance < length ? distance : length);
-
                     out.encode_lens(length--);
                     out.encode_dist(distance);
 
