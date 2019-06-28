@@ -143,7 +143,7 @@ public class Inflater {
     }
     
     public int read() throws IOException {
-        int available = out.available();
+        final int available = out.available();
         if (available == 0) {
             if (end_of_stream) {
                 return -1;
@@ -170,11 +170,11 @@ public class Inflater {
         return out.read();
     }
     
-    public int read(byte[] buf) throws IOException {
+    public int read(final byte[] buf) throws IOException {
         return read(buf, 0, buf.length);
     }
     
-    public int read(byte[] buf, int off, int len) throws IOException {
+    public int read(final byte[] buf, int off, int len) throws IOException {
         int available = out.available();
         if (available < len) {
             if (end_of_stream) {
