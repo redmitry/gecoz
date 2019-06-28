@@ -26,7 +26,7 @@
 package es.elixir.bsc.ngs.nova.gecoz;
 
 import es.elixir.bsc.ngs.nova.algo.ssa.GSSAIndex;
-import es.elixir.bsc.ngs.nova.algo.string.SuffixArray;
+import es.elixir.bsc.ngs.nova.algo.string.SAIS;
 import es.elixir.bsc.ngs.nova.algo.tree.HSWTShape;
 import es.elixir.bsc.ngs.nova.algo.tree.HuffmanShapedWaveletTree;
 import es.elixir.bsc.ngs.nova.algo.tree.HuffmanShapedWaveletTree.DataSource;
@@ -259,7 +259,7 @@ public class GecozFileWriter implements Closeable {
             
             try {
                 final int[] sa = new int[in.limit()];
-                SuffixArray.suffix(in, sa);
+                SAIS.suffix(in, sa);
                 
                 ExecutorService exs = Executors.newSingleThreadExecutor();
                 exs.submit(() -> {
