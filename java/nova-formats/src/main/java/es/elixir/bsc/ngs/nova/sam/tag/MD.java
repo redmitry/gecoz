@@ -23,19 +23,37 @@
  *****************************************************************************
  */
 
-package es.elixir.bsc.ngs.nova.sam;
+package es.elixir.bsc.ngs.nova.sam.tag;
+
+import es.elixir.bsc.ngs.nova.sam.SAMTag;
+import java.util.regex.Pattern;
 
 /**
- * <p>
- * SAM tag interface.
- * </p>
- * 
  * @author Dmitry Repchevsky
  */
 
-public interface SAMTag {
+public class MD implements SAMTag {
+
+    public final static Pattern PATTERN = Pattern.compile("([0-9]+)([A-Z]|\\^[A-Z]+)");
+
+    public final String z;
     
-    char getTagType();
-    String getTagName();
-    Object getTagValue();
+    public MD(final String z) {
+        this.z = z;
+    }
+    
+    @Override
+    public char getTagType() {
+        return SAMTagEnum.MD.type;
+    }
+
+    @Override
+    public String getTagName() {
+        return SAMTagEnum.MD.name();
+    }
+
+    @Override
+    public Object getTagValue() {
+        return z;
+    }
 }

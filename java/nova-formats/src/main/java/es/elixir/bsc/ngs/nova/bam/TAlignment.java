@@ -42,7 +42,7 @@ public class TAlignment {
     protected int refID;
     protected int pos;
 
-    public TAlignment(InputStream in) throws IOException, DataFormatException {
+    public TAlignment(final InputStream in) throws IOException, DataFormatException {
         block_size = (int)DataReaderHelper.readUnsignedInt(in);
         refID = (int)DataReaderHelper.readUnsignedInt(in);
         pos = (int)DataReaderHelper.readUnsignedInt(in) + 1;

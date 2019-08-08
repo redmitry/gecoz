@@ -1,6 +1,6 @@
 /**
  * *****************************************************************************
- * Copyright (C) 2015 Spanish National Bioinformatics Institute (INB) and
+ * Copyright (C) 2019 Spanish National Bioinformatics Institute (INB) and
  * Barcelona Supercomputing Center
  *
  * Modifications to the initial code base are copyright of their respective
@@ -36,7 +36,8 @@ import java.util.zip.DataFormatException;
 
 public class BAMFileInputStream extends GZipFileInputStream {
 
-    private final BAMHeader header;
+    public final BAMHeader header;
+    public final long first_mapped_pos;
     
     public BAMFileInputStream(final Path fbam) throws IOException, DataFormatException {
         this(fbam, null);
@@ -45,10 +46,15 @@ public class BAMFileInputStream extends GZipFileInputStream {
     public BAMFileInputStream(final Path fbam, final Path fbai) throws IOException, DataFormatException {
         super(fbam);
         header = new BAMHeader(this);
+        first_mapped_pos = getBlockPosition();
     }
     
     public int getRefCount() {
         return header.refs.length;
+    }
+    
+    public String getRefName(final int idRef) {
+        return header.refs[idRef].name;
     }
     
     /**

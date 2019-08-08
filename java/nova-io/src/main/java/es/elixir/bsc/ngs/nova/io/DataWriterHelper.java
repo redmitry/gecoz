@@ -23,19 +23,31 @@
  *****************************************************************************
  */
 
-package es.elixir.bsc.ngs.nova.sam;
+package es.elixir.bsc.ngs.nova.io;
+
+import java.io.IOException;
+import java.io.OutputStream;
 
 /**
- * <p>
- * SAM tag interface.
- * </p>
- * 
  * @author Dmitry Repchevsky
  */
 
-public interface SAMTag {
+public class DataWriterHelper {
     
-    char getTagType();
-    String getTagName();
-    Object getTagValue();
+    public static void writeUnsignedShort(final OutputStream out, final int value) throws IOException {
+        out.write(value & 0xFF);
+        out.write((value >> 8) & 0xFF);
+    }
+    
+    public static void writeUnsignedInt(final OutputStream out, final long value) throws IOException {
+        out.write((int)(value & 0xFF));
+        out.write((int)((value >> 8) & 0xFF));
+        out.write((int)((value >> 16) & 0xFF));
+        out.write((int)((value >> 24) & 0xFF));
+    }
+    
+    public static void writeLong(final OutputStream out, final long value) throws IOException {
+        writeUnsignedInt(out, value & 0xFFFFFFFFL);
+        writeUnsignedInt(out, value >>> 32);
+    }
 }

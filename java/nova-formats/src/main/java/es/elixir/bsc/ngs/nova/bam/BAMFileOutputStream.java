@@ -23,19 +23,40 @@
  *****************************************************************************
  */
 
-package es.elixir.bsc.ngs.nova.sam;
+package es.elixir.bsc.ngs.nova.bam;
+
+import es.elixir.bsc.ngs.nova.gzip.GZipFileOutputStream;
+import java.io.IOException;
+import java.nio.file.Path;
 
 /**
  * <p>
- * SAM tag interface.
+ * 
  * </p>
  * 
  * @author Dmitry Repchevsky
  */
 
-public interface SAMTag {
+public class BAMFileOutputStream extends GZipFileOutputStream {
     
-    char getTagType();
-    String getTagName();
-    Object getTagValue();
+    /**
+     * <p>
+     * Create a new BAM file and write the BAM header.
+     * </p>
+     * 
+     * @param file   file path for the new BAM file
+     * @param header BAM header for the BAM file
+     * 
+     * @throws IOException 
+     */
+    public BAMFileOutputStream(final Path file, final BAMHeader header) throws IOException {
+        super(file);
+        
+        header.write(this);
+        flush(); // flush b
+    }
+
+    public void write(final BAMRecord record) throws IOException {
+        record.write(this);
+    }
 }

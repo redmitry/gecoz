@@ -46,7 +46,7 @@ public interface SequenceRecord {
     
     String getCIGAR();
     void setCIGAR(String cigar);
- 
+
     String getQuality();
     void setQuality(String string);
 }

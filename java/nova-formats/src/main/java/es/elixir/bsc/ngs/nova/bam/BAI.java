@@ -47,6 +47,9 @@ import java.util.zip.DataFormatException;
 
 public class BAI {
 
+    public final long unplaced;
+    public final long last_mapped_pos;
+
     public final Bin[][] indexes;
     public final long[][] offsets;
 
@@ -58,7 +61,7 @@ public class BAI {
      * @throws IOException
      * @throws DataFormatException 
      */
-    public BAI(InputStream in) throws IOException, DataFormatException {
+    public BAI(final InputStream in) throws IOException, DataFormatException {
         if (in.read() != 'B' ||
             in.read() != 'A' ||
             in.read() != 'I' ||
@@ -72,13 +75,19 @@ public class BAI {
 
         offsets = new long[n_ref][];
        
+        long last_mapped_chunk_end_pos = 0;
+        
         for (int i = 0; i < n_ref; i++) {
             final int n_bin = (int) DataReaderHelper.readUnsignedInt(in);
             if (n_bin > 0) {
                 map[i] = new TreeMap();
                 for (int j = 0; j < n_bin; j++) {
-                    Bin bin = new Bin(in);
+                    final Bin bin = new Bin(in);
                     map[i].put(bin.bin, bin);
+                    
+                    last_mapped_chunk_end_pos = 
+                            Math.max(last_mapped_chunk_end_pos, 
+                                     bin.chunk_end[bin.chunk_end.length - 1]);
                 }
             }
             final int n_intv = (int) DataReaderHelper.readUnsignedInt(in);
@@ -89,8 +98,11 @@ public class BAI {
                 }
             }
         }
-        
+
         indexes = indexes(map);
+        
+        unplaced = Math.max(0, DataReaderHelper.readLong(in));
+        last_mapped_pos = last_mapped_chunk_end_pos;
     }
     
     /**
@@ -103,46 +115,66 @@ public class BAI {
      * @throws IOException
      * @throws DataFormatException 
      */
-    public BAI(BAMFileInputStream in) throws IOException, DataFormatException {
+    public BAI(final BAMFileInputStream in) throws IOException, DataFormatException {
         final int nRef = in.getRefCount();
         
         final TreeMap<Integer,Bin> map[] = new TreeMap[nRef]; // bins;
-        
-        final BAMAlignment linear[] = new BAMAlignment[nRef];
+
+        final BAMRecord linear[] = new BAMRecord[nRef];
         final List<Long> list[] = new ArrayList[nRef];
 
+        long last_mapped_chunk_end_pos = 0;
+        long unmapped_unplaced = 0;
+        
         while(in.available() >= 0) {
             
             final long chunk_beg = in.index();
-            BAMAlignment a = BAMAlignment.decode(in);
+            final BAMRecord record = BAMRecord.decode(in);
             final long chunk_end = in.index();
-            
-            if (a.getRefID() >= nRef) {
+
+            final int ref = record.getRefID();
+            if (ref < 0) {
+                unmapped_unplaced++;
                 continue;
             }
-            
-            final int ref = a.getRefID();
-            
-            final int beg = a.getPositionStart();
-            final int end = a.getPositionEnd();
+            if (ref >= nRef) {
+                continue;
+            }
 
-            final int nbin = reg2bin(beg - 1, end > 0 ? end : beg);
+            last_mapped_chunk_end_pos = Math.max(last_mapped_chunk_end_pos, chunk_end);
+            
+            final int nbin = record.getBin();
 
             if (map[ref] == null) {
-                Bin bin = new Bin(nbin, new long[] {chunk_beg}, new long[] {chunk_end});
                 map[ref] = new TreeMap();
+                final Bin bin = nbin == Bin.PSEUDO_BIN ? new Bin(nbin, new long[] {chunk_beg, 0}, new long[] {chunk_end, 1}) :
+                                                         new Bin(nbin, new long[] {chunk_beg}, new long[] {chunk_end});
                 map[ref].put(nbin, bin);
             } else {
                 Bin bin = map[ref].get(nbin);
                 if (bin == null) {
-                    bin = new Bin(nbin, new long[] {chunk_beg}, new long[] {chunk_end});
+                    bin = nbin == Bin.PSEUDO_BIN ? new Bin(nbin, new long[] {chunk_beg, 0}, new long[] {chunk_end, 1}) :
+                                                         new Bin(nbin, new long[] {chunk_beg}, new long[] {chunk_end});
                     map[ref].put(nbin, bin);
+                } else if (nbin == Bin.PSEUDO_BIN) {
+                    bin.chunk_beg[0] = Math.min(bin.chunk_beg[0], chunk_beg);
+                    bin.chunk_end[0] = Math.max(bin.chunk_end[0], chunk_end);
+                    bin.chunk_end[1]++; // n_unmapped++
                 } else {
                     bin.merge(chunk_beg, chunk_end);
+                    bin = map[ref].get(Bin.PSEUDO_BIN);
+                    if (bin == null) {
+                        map[ref].put(nbin, new Bin(nbin, new long[] {0, 1}, new long[] {0, 0}));
+                    } else {
+                        bin.chunk_beg[0]++; // n_mapped++
+                    }
                 }
             }
 
-            final int lsegment = beg >> 14; // 16384
+            final int pos = record.getPositionStart();
+            final int end = record.getPositionEnd();
+
+            final int lsegment = pos >> 14; // 16384
             final int rsegment = end >> 14;
 
             if (list[ref] == null) {
@@ -153,7 +185,7 @@ public class BAI {
                 for (int i = lsegment; i <= rsegment; i++) {
                     list[ref].add(chunk_beg);
                 }
-                linear[ref] = a;
+                linear[ref] = record;
             } else if (list[ref].size() <= rsegment) {
                 for (int i = list[ref].size(); i <= lsegment; i++) {
                     list[ref].add(chunk_beg);
@@ -161,9 +193,9 @@ public class BAI {
                 for (int i = lsegment; i < rsegment; i++) {
                     list[ref].add(chunk_beg);
                 }
-                linear[ref] = a;
+                linear[ref] = record;
             } else if (end > linear[ref].getPositionEnd()) {
-                linear[ref] = a;
+                linear[ref] = record;
             }
         }
         
@@ -178,16 +210,23 @@ public class BAI {
         }
 
         indexes = indexes(map);
+        
+        unplaced = unmapped_unplaced;
+        last_mapped_pos = last_mapped_chunk_end_pos;
     }
 
-    public void save(OutputStream out) throws IOException {
+    public long getLastMappedChunkEndPosition() {
+        return last_mapped_pos;
+    }
+
+    public void save(final OutputStream out) throws IOException {
         out.write('B');
         out.write('A');
         out.write('I');
         out.write(01);
         
-        ByteBuffer u32 = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
-        ByteBuffer u64 = ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN);
+        final ByteBuffer u32 = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
+        final ByteBuffer u64 = ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN);
 
         final int n_ref = offsets.length;
         
@@ -220,7 +259,7 @@ public class BAI {
         }
     }
 
-    private Bin[][] indexes(TreeMap<Integer,Bin> map[]) {
+    private Bin[][] indexes(final TreeMap<Integer,Bin> map[]) {
         Bin[][] arr = new Bin[map.length][];
         for (int i = 0, n = arr.length; i < n; i++) {
             if (map[i] != null) {
@@ -235,7 +274,7 @@ public class BAI {
         return arr;
     }
 
-    public static int reg2bin(int start, int end) {
+    public static int reg2bin(final int start, int end) {
         end--;
         if (start >> 14 == end >> 14) {
             return ((1 << 15) - 1) / 7 + (start >> 14);
@@ -255,7 +294,7 @@ public class BAI {
         return 0;
     }
     
-    public static int[] reg2bins(int start, int end) {
+    public static int[] reg2bins(final int start, final int end) {
         int idx = 0;
         int[] bins = new int[1];
         for (int i = (start >> 26) + 1, n = (end >> 26) + 1; i <= n; i++) {
@@ -276,7 +315,7 @@ public class BAI {
         return Arrays.copyOf(bins, idx);
     }
     
-    private static int[] addBin(int[] bins, int idx, int nbin) {
+    private static int[] addBin(int[] bins, final int idx, final int nbin) {
         if (idx >= bins.length) {
             bins = Arrays.copyOf(bins, bins.length * 2);
         }

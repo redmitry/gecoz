@@ -40,7 +40,7 @@ public class CIGAR {
     private int length;
     private long[] cigar;
 
-    public CIGAR(String cigar) {
+    public CIGAR(final String cigar) {
         this.cigar = encode(cigar);
     }
     
@@ -74,7 +74,7 @@ public class CIGAR {
             final String ln = m.group(1);
             final String ch = m.group(2);
             if (ln != null && ch != null) {
-                if (cigar == null) {
+                if (arr == null) {
                     arr = new long[1];
                 } else {
                     arr = Arrays.copyOf(arr, arr.length + 1);

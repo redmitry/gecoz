@@ -23,19 +23,34 @@
  *****************************************************************************
  */
 
-package es.elixir.bsc.ngs.nova.sam;
+package es.elixir.bsc.ngs.nova.sam.tag;
+
+import es.elixir.bsc.ngs.nova.sam.SAMTag;
 
 /**
- * <p>
- * SAM tag interface.
- * </p>
- * 
  * @author Dmitry Repchevsky
  */
 
-public interface SAMTag {
+public class FZ implements SAMTag {
+
+    public final int[] s;
     
-    char getTagType();
-    String getTagName();
-    Object getTagValue();
+    public FZ(final int[] s) {
+        this.s = s;
+    }
+    
+    @Override
+    public char getTagType() {
+        return 'S'; // 'BS'
+    }
+
+    @Override
+    public String getTagName() {
+        return SAMTagEnum.FZ.name();
+    }
+
+    @Override
+    public Object getTagValue() {
+        return s;
+    }
 }

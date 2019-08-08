@@ -1,6 +1,6 @@
 /**
  * *****************************************************************************
- * Copyright (C) 2015 Spanish National Bioinformatics Institute (INB) and
+ * Copyright (C) 2019 Spanish National Bioinformatics Institute (INB) and
  * Barcelona Supercomputing Center
  *
  * Modifications to the initial code base are copyright of their respective
@@ -23,14 +23,34 @@
  *****************************************************************************
  */
 
-package es.elixir.bsc.ngs.nova.sam;
+package es.elixir.bsc.ngs.nova.sam.tag;
 
-import java.util.regex.Pattern;
+import es.elixir.bsc.ngs.nova.sam.SAMTag;
 
 /**
  * @author Dmitry Repchevsky
  */
 
-public class MD {
-    public final static Pattern PATTERN = Pattern.compile("([0-9]+)([A-Z]|\\^[A-Z]+)");
+public class CP implements SAMTag {
+
+    public final int i;
+    
+    public CP(final int i) {
+        this.i = i;
+    }
+    
+    @Override
+    public char getTagType() {
+        return SAMTagEnum.CP.type;
+    }
+
+    @Override
+    public String getTagName() {
+        return SAMTagEnum.CP.name();
+    }
+
+    @Override
+    public Object getTagValue() {
+        return i;
+    }
 }

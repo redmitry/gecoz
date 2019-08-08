@@ -1,6 +1,6 @@
 /**
  * *****************************************************************************
- * Copyright (C) 2015 Spanish National Bioinformatics Institute (INB) and
+ * Copyright (C) 2019 Spanish National Bioinformatics Institute (INB) and
  * Barcelona Supercomputing Center
  *
  * Modifications to the initial code base are copyright of their respective
@@ -35,19 +35,24 @@ import java.util.Arrays;
  */
 
 public class Bin implements Comparable<Bin> {
-        
+
+    public final static int PSEUDO_BIN = 37450;
+
     public final int bin;
 
     public long[] chunk_beg;
     public long[] chunk_end;
 
-    protected Bin(int bin, long[] chunk_beg, long[] chunk_end) {
+    protected Bin(final int bin, 
+                  final long[] chunk_beg, 
+                  final long[] chunk_end) {
+
         this.bin = bin;
         this.chunk_beg = chunk_beg;
         this.chunk_end = chunk_end;
     }
 
-    public Bin(InputStream in) throws IOException {
+    public Bin(final InputStream in) throws IOException {
         bin = (int)DataReaderHelper.readUnsignedInt(in);
 
         final int n_chunk = (int)DataReaderHelper.readUnsignedInt(in);
