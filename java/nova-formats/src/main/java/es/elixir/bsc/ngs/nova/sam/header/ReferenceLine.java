@@ -87,7 +87,7 @@ public class ReferenceLine extends AbstractHeaderLine {
         description = tags[5];
         md5 = tags[6];
         species = tags[7];
-        moleculeTopology = tags[8] == null ? null : ReferenceLineMoleculeTopology.valueOf(tags[8]);
+        moleculeTopology = tags[8] == null ? null : ReferenceLineMoleculeTopology.valueOf(tags[8].toUpperCase());
         uri = tags[9];
     }
 
