@@ -77,7 +77,7 @@ public class BAMHeader extends SAMHeader {
         }
         final int l_text = (int)DataReaderHelper.readUnsignedInt(in);
         final byte[] txt = new byte[l_text];
-        in.read(txt);
+        for (int i = 0, n; i < l_text && (n = in.read(txt, i, l_text - i)) >= 0; i += n) {}
 
         final SAMHeader header = new SAMHeader(new String(txt, StandardCharsets.US_ASCII));
 
@@ -91,14 +91,19 @@ public class BAMHeader extends SAMHeader {
         refs = new Reference[n_ref];
         
         for (int i = 0; i < n_ref; i++) {
-            final int l_name = (int)DataReaderHelper.readUnsignedInt(in);
+            final int l_name = (int)(DataReaderHelper.readUnsignedInt(in) - 1);
             final byte[] name = new byte[l_name];
-            in.read(name);
+            for (int j = 0, n; j < l_name && (n = in.read(name, j, l_name - j)) >= 0; j += n) {}
             
+            final int nul = in.read();
+            if (nul != 0) {
+                throw new DataFormatException("invalid reference name size");
+            }
+
             final int l_ref = (int)DataReaderHelper.readUnsignedInt(in);
             
             refs[i] = new Reference(
-                    new String(name, 0, l_name - 1, StandardCharsets.US_ASCII), l_ref);
+                    new String(name, 0, l_name, StandardCharsets.US_ASCII), l_ref);
         }
     }
 
